@@ -6,6 +6,8 @@ from scipy.spatial.transform import Rotation
 
 from Simulation.SimulationMath import noRotation
 
+from Simulation.SimulationMath import angleBetweenVectors
+
 
 class ForceTypes(Enum):
     gravity = 1,
@@ -73,10 +75,13 @@ class Rocket(SimulationEntity):
 
     def changeThrusterConfig(self, thrusterForce: float, thrusterRotation: Rotation):
         self.thrusterForce = max(min(thrusterForce, self.thrusterForceMax), self.thrusterForceMin)
-        # unfinished
-        rotationVec = thrusterRotation.as_rotvec()
-        rotationVecLimited = rotationVec * min(np.linalg.norm(rotationVec), self.thrusterRotationMax) / np.linalg.norm(rotationVec)
-        self.thrusterRotation = Rotation.from_rotvec(rotationVecLimited)
+        
+        angle = angleBetweenVectors(self.rotation, thrusterRotation)     
+        angleRadians = min(self.thrusterRotationMax, angle)
+        
+        if (angleRadians != self.thrusterRotationMax or (angleRadians == self.thrusterRotationMax and angle == self.thrusterRotationMax)):
+            self.thrusterRotation = thrusterRotation
+            
 
     def applyAction(self):
         self.force += self.thrusterForce * (self.rotation * self.thrusterRotation).apply(np.array([0, 0, 1]))
