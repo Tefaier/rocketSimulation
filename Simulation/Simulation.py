@@ -3,7 +3,7 @@ from Entity import *
 import quaternion as quat
 from scipy.spatial.transform import Rotation
 
-from Simulation.SimulationMath import distanceBetweenObjects, noRotation
+from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotationToVector, vectorUp
 
 gravityConstant = 6.67e-11
 
@@ -98,15 +98,17 @@ def checkExitCondition(simulationTime: pd.Timedelta, entities: List[SimulationEn
     earth = next(x for x in entities if x.name == earthName)
     return len(data) > 1e2 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
 
-
 def getSimulationSetup() -> List[SimulationEntity]:
+    def rocketConstraint(obj: SimulationEntity):
+        obj.rotation = rotationToVector(vectorUp, obj.velocity)
+
     return [
         SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
                          rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity], forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid]),
         Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=0,
                rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
                thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10),
-               forcesApplied=[ForceTypes.gravity]),
+               forcesApplied=[ForceTypes.gravity], constraintFunction=rocketConstraint),
         SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
                          rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity])
     ]
