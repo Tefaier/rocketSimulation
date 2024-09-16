@@ -79,8 +79,8 @@ class Rocket(SimulationEntity):
         angle = angleBetweenVectors(self.rotation, thrusterRotation)     
         angleRadians = min(self.thrusterRotationMax, angle)
         
-        if (angleRadians != self.thrusterRotationMax or (angleRadians == self.thrusterRotationMax and angle == self.thrusterRotationMax)):
-            self.thrusterRotation = thrusterRotation
+        if (angleRadians != self.thrusterRotationMax or angle == self.thrusterRotationMax):
+            self.thrusterRotation = thrusterRotation / np.linalg.norm(thrusterRotation)
             
 
     def applyAction(self):
