@@ -26,13 +26,12 @@ class SimulationEntity:
     forcesApplied: list[ForceTypes]
     forcesIgnored: list[ForceTypes]
 
-    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, force = np.array([0, 0, 0], dtype='float64'), forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
+    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
         self.name = name
         self.mass = mass
         self.volume = volume
-        self.position = position
-        self.velocity = velocity
-        self.force = force
+        self.position = position.astype(np.float64)
+        self.velocity = velocity.astype(np.float64)
         self.rotation = rotation
         self.rotationSpeed = rotationSpeed
         self.forcesApplied = forcesApplied
@@ -52,8 +51,8 @@ class SimulationEntity:
 
     def clearForces(self):
         from Simulation.SimulationMath import noRotation
-        force = np.array([0, 0, 0], dtype=np.float64)
-        torque = noRotation
+        self.force = np.array([0, 0, 0], dtype=np.float64)
+        self.torque = noRotation
 
 class Rocket(SimulationEntity):
     thrusterForce: float
