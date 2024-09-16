@@ -71,7 +71,7 @@ class Rocket(SimulationEntity):
 
     def changeThrusterConfig(self, thrusterForce: float, thrusterRotation: Rotation):
         self.thrusterForce = max(min(thrusterForce, self.thrusterForceMax), self.thrusterForceMin)
-        # unfinished
+        # unfinished - Rotation input may affect restriction to be lower than should be
         rotationVec = thrusterRotation.as_rotvec()
         rotationVecLimited = rotationVec * min(np.linalg.norm(rotationVec), self.thrusterRotationMax) / np.linalg.norm(rotationVec)
         self.thrusterRotation = Rotation.from_rotvec(rotationVecLimited)
