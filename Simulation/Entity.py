@@ -4,9 +4,6 @@ import numpy as np
 from quaternion import quaternion
 from scipy.spatial.transform import Rotation
 
-from Simulation.SimulationMath import noRotation
-
-
 class ForceTypes(Enum):
     gravity = 1,
     buoyancy = 2,
@@ -29,12 +26,13 @@ class SimulationEntity:
     forcesApplied: list[ForceTypes]
     forcesIgnored: list[ForceTypes]
 
-    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
+    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, force = np.array([0, 0, 0], dtype='float64'), forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
         self.name = name
         self.mass = mass
         self.volume = volume
         self.position = position
         self.velocity = velocity
+        self.force = force
         self.rotation = rotation
         self.rotationSpeed = rotationSpeed
         self.forcesApplied = forcesApplied
@@ -49,10 +47,11 @@ class SimulationEntity:
         if self.constraint != None:
             self.constraint(self)
 
-    def getData(self):
-        np.array([self.name, self.position, self.rotation])
+    def getData(self) -> np.array:
+        return np.array([self.name, self.position, self.rotation], dtype='object')
 
     def clearForces(self):
+        from Simulation.SimulationMath import noRotation
         force = np.array([0, 0, 0], dtype=np.float64)
         torque = noRotation
 

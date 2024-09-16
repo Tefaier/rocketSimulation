@@ -13,10 +13,14 @@ def distanceBetweenObjects(obj1: SimulationEntity, obj2: SimulationEntity):
 def rotationToVector(vecTo: np.array) -> Rotation:
     return rotationToVector(np.array([0, 0, 1]), vecTo)
 
+def vecNormalize(vec: np.array) -> np.array:
+    vecNorm = np.linalg.norm(vec)
+    return np.divide(vec, np.linalg.norm(vec), where=vecNorm!=0)
+
 # based on https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space
 def rotationToVector(vecFrom: np.array, vecTo: np.array) -> Rotation:
-    a = (vecFrom / np.linalg.norm(vecFrom))
-    b = (vecTo / np.linalg.norm(vecTo))
+    a = vecNormalize(vecFrom)
+    b = vecNormalize(vecTo)
     v = np.cross(a, b)
     c = np.dot(a, b)
     s = np.linalg.norm(v)
