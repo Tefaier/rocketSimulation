@@ -133,6 +133,6 @@ def calculateInteraction(obj1: SimulationEntity, obj2: SimulationEntity):
             forceReceiver = obj1 if obj2 == forceSupplier else obj2
             effect = np.array
             if force is ForceTypes.gravity:
-                effect = (obj2.position - obj1.position) * gravityConstant * obj1.mass * obj2.mass / (np.linalg.norm(obj2.position - obj1.position) ** 2)
+                effect = (obj2.position - obj1.position) * gravityConstant * obj1.mass * obj2.mass / (np.linalg.norm(obj2.position - obj1.position) ** 3)
                 obj1.force += effect
                 obj2.force -= effect
