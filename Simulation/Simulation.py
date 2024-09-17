@@ -1,4 +1,7 @@
 from typing import List
+
+import pandas as pd
+
 from Simulation.Entity import *
 import quaternion as quat
 from scipy.spatial.transform import Rotation
@@ -37,6 +40,7 @@ rocketName = "Rocket"
 rocketMass = 109000
 rocketVolume = 146.5
 rocketMaxForce = 1486000
+rocketVelocity = earthVelocity
 rocketRotation = earthRotation * Rotation.from_quat(quaternion)
 rocketPosition = earthPosition + (rocketRotation).apply(vectorUp) * earthRadius
 
@@ -45,13 +49,13 @@ mksName = "MKS"
 mksMass = 440000
 mksFlyHeight = 418000
 mksRotationProjected = earthRotation * Rotation.from_quat(quaternion)
-mksVelocity = mksRotationProjected.apply(np.array([0, 1, 0])) * 7700
+mksVelocity = mksRotationProjected.apply(np.array([0, 1, 0])) * 7700 + earthVelocity
 mksPosition = earthPosition + (mksRotationProjected).apply(vectorUp) * (earthRadius + mksFlyHeight)
 
 
-
-
-def startSimulation(timeUnit = pd.Timedelta(minutes = 1)):
+def startSimulation(timeUnit = pd.Timedelta(minutes = 1), commands = [[pd.Timedelta(minutes=0), 1e10, np.array([0, 0, 1])]]):
+    commands.sort(key = lambda entry: entry[0].seconds)
+    commands.reverse()
     print("Simulation started")
     entities = getSimulationSetup()
     trackedEntities = entities
@@ -59,11 +63,18 @@ def startSimulation(timeUnit = pd.Timedelta(minutes = 1)):
     simulationTime = pd.Timedelta(seconds = 0)
     while True:
         collectedData.append([simulationTime, collectData(trackedEntities)])
+        executeCommands(commands, entities, simulationTime)
         executeFrame(timeUnit, entities)
         simulationTime += timeUnit
         if checkExitCondition(simulationTime, entities, collectedData): break
     print("Simulation ended")
     return collectedData
+
+def executeCommands(commands: list, entities: List[SimulationEntity], simulationTime: pd.Timedelta):
+    while len(commands) > 0 and commands[-1][0] < simulationTime:
+        rocket = next(x for x in entities if x.name == rocketName)
+        rocket.changeThrusterConfig(commands[-1][1], rotationToVectorFromBase(commands[-1][2]))
+        commands.pop()
 
 def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
     def calculateForces():
@@ -107,7 +118,7 @@ def getSimulationSetup() -> List[SimulationEntity]:
     return [
         SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
                          rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity], forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid]),
-        Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=np.array([0, 0, 0]),
+        Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity,
                rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
                thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10),
                forcesApplied=[ForceTypes.gravity], constraintFunction=rocketConstraint),
