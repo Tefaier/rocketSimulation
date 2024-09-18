@@ -83,6 +83,9 @@ def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
             obj.velocity += acceleration * frameTime.seconds
             obj.position += obj.velocity * frameTime.seconds
 
+            obj.rotationSpeed *= Rotation.from_rotvec(obj.torque.as_rotvec() * frameTime.seconds)
+            obj.rotation *= Rotation.from_rotvec(obj.rotationSpeed.as_rotvec() * frameTime.seconds)
+
     def applyConstraints():
         for obj in entities:
             obj.applyConstraint()
@@ -102,14 +105,15 @@ def checkExitCondition(simulationTime: pd.Timedelta, entities: List[SimulationEn
 
 def getSimulationSetup() -> List[SimulationEntity]:
     def rocketConstraint(obj: SimulationEntity):
-        obj.rotation = rotationToVector(vectorUp, obj.velocity)
+        pass
+        #  obj.rotation = rotationToVector(vectorUp, obj.velocity)
 
     return [
         SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
                          rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity], forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid]),
         Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=np.array([0, 0, 0]),
                rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
-               thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10),
+               thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10), distanceTTCOM=50,
                forcesApplied=[ForceTypes.gravity], constraintFunction=rocketConstraint),
         SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
                          rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity])

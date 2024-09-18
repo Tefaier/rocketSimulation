@@ -61,13 +61,16 @@ class Rocket(SimulationEntity):
     thrusterRotation: np.array  # quaternions
     thrusterRotationMax: float
 
-    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, thrusterForce, thrusterForceMin, thrusterForceMax, thrusterRotation, thrusterRotationMax, forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
+    distanceThrusterToCenterOfMass: float
+
+    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, thrusterForce, thrusterForceMin, thrusterForceMax, thrusterRotation, thrusterRotationMax, distanceTTCOM, forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
         super().__init__(name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied, forcesIgnored, constraintFunction, buoyancyFunction)
         self.thrusterForce = thrusterForce
         self.thrusterForceMin = thrusterForceMin
         self.thrusterForceMax = thrusterForceMax
         self.thrusterRotation = thrusterRotation
         self.thrusterRotationMax = thrusterRotationMax
+        self.distanceThrusterToCenterOfMass = distanceTTCOM
 
     def changeThrusterConfig(self, thrusterForce: float, thrusterRotation: Rotation):
         self.thrusterForce = max(min(thrusterForce, self.thrusterForceMax), self.thrusterForceMin)
@@ -79,4 +82,7 @@ class Rocket(SimulationEntity):
     def applyAction(self):
         self.force += self.thrusterForce * (self.rotation * self.thrusterRotation).apply(np.array([0, 0, 1]))
 
+        # due to torque being not fully supported yet, it's made this way
+        vectorToCenterOfMass = self.distanceThrusterToCenterOfMass * (self.rotation).apply(np.array([0, 0, 1]))
+        self.torque = Rotation.from_rotvec(np.cross(self.force, vectorToCenterOfMass) / self.mass)
 
