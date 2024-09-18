@@ -46,8 +46,8 @@ class SimulationEntity:
         if self.constraint != None:
             self.constraint(self)
 
-    def getData(self) -> np.array:
-        return np.array([self.name, self.position, self.rotation], dtype='object')
+    def getData(self) -> list:
+        return [self.name, np.copy(self.position), self.rotation]
 
     def clearForces(self):
         from Simulation.SimulationMath import noRotation
@@ -76,8 +76,12 @@ class Rocket(SimulationEntity):
         self.thrusterForce = max(min(thrusterForce, self.thrusterForceMax), self.thrusterForceMin)
         # unfinished - Rotation input may affect restriction to be lower than should be
         rotationVec = thrusterRotation.as_rotvec()
-        rotationVecLimited = rotationVec * min(np.linalg.norm(rotationVec), self.thrusterRotationMax) / np.linalg.norm(rotationVec)
-        self.thrusterRotation = Rotation.from_rotvec(rotationVecLimited)
+        if np.linalg.norm(rotationVec) == 0:
+            from Simulation.SimulationMath import noRotation
+            self.thrusterRotation = noRotation
+        else:
+            rotationVecLimited = rotationVec * min(np.linalg.norm(rotationVec), self.thrusterRotationMax) / np.linalg.norm(rotationVec)
+            self.thrusterRotation = Rotation.from_rotvec(rotationVecLimited)
 
     def applyAction(self):
         self.force += self.thrusterForce * (self.rotation * self.thrusterRotation).apply(np.array([0, 0, 1]))

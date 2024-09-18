@@ -1,4 +1,7 @@
 from typing import List
+
+import pandas as pd
+
 from Simulation.Entity import *
 import quaternion as quat
 from scipy.spatial.transform import Rotation
@@ -37,6 +40,7 @@ rocketName = "Rocket"
 rocketMass = 109000
 rocketVolume = 146.5
 rocketMaxForce = 1486000
+rocketVelocity = earthVelocity
 rocketRotation = earthRotation * Rotation.from_quat(quaternion)
 rocketPosition = earthPosition + (rocketRotation).apply(vectorUp) * earthRadius
 
@@ -45,13 +49,13 @@ mksName = "MKS"
 mksMass = 440000
 mksFlyHeight = 418000
 mksRotationProjected = earthRotation * Rotation.from_quat(quaternion)
-mksVelocity = mksRotationProjected.apply(np.array([0, 1, 0])) * 7700
+mksVelocity = mksRotationProjected.apply(np.array([0, 1, 0])) * 7700 + earthVelocity
 mksPosition = earthPosition + (mksRotationProjected).apply(vectorUp) * (earthRadius + mksFlyHeight)
 
 
-
-
-def startSimulation(timeUnit = pd.Timedelta(minutes = 1)):
+def startSimulation(timeUnit = pd.Timedelta(minutes = 1), commands = [[pd.Timedelta(minutes=0), 1e10, np.array([0, 0, 1])]]):
+    commands.sort(key = lambda entry: entry[0].seconds)
+    commands.reverse()
     print("Simulation started")
     entities = getSimulationSetup()
     trackedEntities = entities
@@ -59,11 +63,18 @@ def startSimulation(timeUnit = pd.Timedelta(minutes = 1)):
     simulationTime = pd.Timedelta(seconds = 0)
     while True:
         collectedData.append([simulationTime, collectData(trackedEntities)])
+        executeCommands(commands, entities, simulationTime)
         executeFrame(timeUnit, entities)
         simulationTime += timeUnit
         if checkExitCondition(simulationTime, entities, collectedData): break
     print("Simulation ended")
     return collectedData
+
+def executeCommands(commands: list, entities: List[SimulationEntity], simulationTime: pd.Timedelta):
+    while len(commands) > 0 and commands[-1][0] < simulationTime:
+        rocket = next(x for x in entities if x.name == rocketName)
+        rocket.changeThrusterConfig(commands[-1][1], rotationToVectorFromBase(commands[-1][2]))
+        commands.pop()
 
 def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
     def calculateForces():
@@ -75,7 +86,7 @@ def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
 
     def applyActions():
         for obj in entities:
-            obj.applyConstraint()
+            obj.applyAction()
 
     def applyChanges():
         for obj in entities:
@@ -111,7 +122,7 @@ def getSimulationSetup() -> List[SimulationEntity]:
     return [
         SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
                          rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity], forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid]),
-        Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=np.array([0, 0, 0]),
+        Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity,
                rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
                thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10), distanceTTCOM=50,
                forcesApplied=[ForceTypes.gravity], constraintFunction=rocketConstraint),
@@ -121,10 +132,11 @@ def getSimulationSetup() -> List[SimulationEntity]:
 
 def calculateInteraction(obj1: SimulationEntity, obj2: SimulationEntity):
     for force in ForceTypes:
-        if (force in obj1.forcesApplied or force in obj2.forcesApplied) and force not in obj1.forcesIgnored and force not in obj2.forcesApplied:
+        if (force in obj1.forcesApplied or force in obj2.forcesApplied) and force not in obj1.forcesIgnored and force not in obj2.forcesIgnored:
             forceSupplier = obj1 if force in obj1.forcesApplied else obj2
+            forceReceiver = obj1 if obj2 == forceSupplier else obj2
             effect = np.array
             if force is ForceTypes.gravity:
-                effect = (obj2.position - obj1.position) * gravityConstant * obj1.mass * obj2.mass / (np.linalg.norm(obj2.position - obj1.position) ** 2)
+                effect = (obj2.position - obj1.position) * gravityConstant * obj1.mass * obj2.mass / (np.linalg.norm(obj2.position - obj1.position) ** 3)
                 obj1.force += effect
                 obj2.force -= effect
