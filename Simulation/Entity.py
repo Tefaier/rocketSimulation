@@ -4,9 +4,6 @@ import numpy as np
 from quaternion import quaternion
 from scipy.spatial.transform import Rotation
 
-from Simulation.SimulationMath import noRotation
-
-
 class ForceTypes(Enum):
     gravity = 1,
     buoyancy = 2,
@@ -33,8 +30,8 @@ class SimulationEntity:
         self.name = name
         self.mass = mass
         self.volume = volume
-        self.position = position
-        self.velocity = velocity
+        self.position = position.astype(np.float64)
+        self.velocity = velocity.astype(np.float64)
         self.rotation = rotation
         self.rotationSpeed = rotationSpeed
         self.forcesApplied = forcesApplied
@@ -49,12 +46,13 @@ class SimulationEntity:
         if self.constraint != None:
             self.constraint(self)
 
-    def getData(self):
-        np.array([self.name, self.position, self.rotation])
+    def getData(self) -> np.array:
+        return np.array([self.name, self.position, self.rotation], dtype='object')
 
     def clearForces(self):
-        force = np.array([0, 0, 0], dtype=np.float64)
-        torque = noRotation
+        from Simulation.SimulationMath import noRotation
+        self.force = np.array([0, 0, 0], dtype=np.float64)
+        self.torque = noRotation
 
 class Rocket(SimulationEntity):
     thrusterForce: float
@@ -73,7 +71,7 @@ class Rocket(SimulationEntity):
 
     def changeThrusterConfig(self, thrusterForce: float, thrusterRotation: Rotation):
         self.thrusterForce = max(min(thrusterForce, self.thrusterForceMax), self.thrusterForceMin)
-        # unfinished
+        # unfinished - Rotation input may affect restriction to be lower than should be
         rotationVec = thrusterRotation.as_rotvec()
         rotationVecLimited = rotationVec * min(np.linalg.norm(rotationVec), self.thrusterRotationMax) / np.linalg.norm(rotationVec)
         self.thrusterRotation = Rotation.from_rotvec(rotationVecLimited)
