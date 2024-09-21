@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 
+from Simulation.CommandLogic import Command, CommandType
 from Simulation.Entity import *
 import quaternion as quat
 from scipy.spatial.transform import Rotation
@@ -55,27 +56,40 @@ mksVelocity = mksRotationProjected.apply(np.array([0, 1, 0])) * 7700 + earthVelo
 mksPosition = earthPosition + (mksRotationProjected).apply(vectorUp) * (earthRadius + mksFlyHeight)
 
 
-def startSimulation(timeUnit = pd.Timedelta(minutes = 1), commands = [[pd.Timedelta(minutes=0), 1e10, np.array([0, 0, 1])]]):
-    commands.sort(key = lambda entry: entry[0].seconds)
+def startSimulation(
+        timeUnit = pd.Timedelta(minutes = 1),
+        commands: List[Command] = [
+            Command(
+                CommandType.gravityTurn,
+                {"from": earthName}
+            )
+        ]):
     commands.reverse()
-    print("Simulation started")
+
     entities = getSimulationSetup()
     trackedEntities = entities
+    entitiesDictionary: dict[str, SimulationEntity] = {}
+    for entity in entities:
+        entitiesDictionary[entity.name] = entity
+
     collectedData = []
     simulationTime = pd.Timedelta(seconds = 0)
+
+    print("Simulation started")
+
     while True:
         collectedData.append([simulationTime, collectData(trackedEntities)])
-        executeCommands(commands, entities, simulationTime)
+        executeCommands(commands, entitiesDictionary, simulationTime)
         executeFrame(timeUnit, entities)
         simulationTime += timeUnit
         if checkExitCondition(simulationTime, entities, collectedData): break
+
     print("Simulation ended")
     return collectedData
 
-def executeCommands(commands: list, entities: List[SimulationEntity], simulationTime: pd.Timedelta):
-    while len(commands) > 0 and commands[-1][0] < simulationTime:
-        rocket = next(x for x in entities if x.name == rocketName)
-        rocket.changeThrusterConfig(commands[-1][1], rotationToVectorFromBase(commands[-1][2]))
+def executeCommands(commands: List[Command], entities: dict[str, SimulationEntity], simulationTime: pd.Timedelta):
+    if len(commands) == 0: return
+    if commands[-1].executeCommand(entities):
         commands.pop()
 
 def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
