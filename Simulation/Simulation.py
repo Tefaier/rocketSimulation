@@ -30,8 +30,7 @@ def startSimulation(
 
     while True:
         collectedData.append([simulationTime, collectData(trackedEntities)])
-        executeCommands(commands, entitiesDictionary, simulationTime)
-        executeFrame(timeUnit, entities)
+        executeFrame(timeUnit, entities, commands, entitiesDictionary, simulationTime)
         simulationTime += timeUnit
         if checkExitCondition(simulationTime, entities, collectedData): break
 
@@ -43,7 +42,7 @@ def executeCommands(commands: List[Command], entities: dict[str, SimulationEntit
     if commands[-1].executeCommand(entities):
         commands.pop()
 
-def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
+def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity], commands: List[Command], entitiesDictionary: dict[str, SimulationEntity], simulationTime: pd.Timedelta):
     def calculateForces():
         for obj in entities:
             obj.clearForces()
@@ -70,6 +69,7 @@ def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
             obj.applyConstraint()
 
     calculateForces()
+    executeCommands(commands, entitiesDictionary, simulationTime)  # had to move it here to avoid interference from actions
     applyActions()
     applyChanges()
     applyConstraints()
