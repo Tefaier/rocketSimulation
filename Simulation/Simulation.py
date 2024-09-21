@@ -92,9 +92,10 @@ def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity]):
 
     def applyChanges():
         for obj in entities:
-            acceleration = obj.force / obj.mass
-            obj.velocity += acceleration * frameTime.seconds
-            obj.position += obj.velocity * frameTime.seconds
+            if obj.mass is not None and obj.mass != 0:
+                acceleration = obj.force / obj.mass
+                obj.velocity += acceleration * frameTime.seconds
+                obj.position += obj.velocity * frameTime.seconds
 
             obj.rotationSpeed *= Rotation.from_rotvec(obj.torque.as_rotvec() * frameTime.seconds)
             obj.rotation *= Rotation.from_rotvec(obj.rotationSpeed.as_rotvec() * frameTime.seconds)
@@ -125,7 +126,8 @@ def getSimulationSetup() -> List[SimulationEntity]:
                     thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10), distanceTTCOM=50,
                     forcesApplied=[ForceTypes.gravity], radius=rocketRadius)
     mks = SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
-                           rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity])
+                           rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity],
+                           forcesIgnored=[ForceTypes.frictionFluid])
 
     def earthAtmosphereConstraint(obj: SimulationEntity):
         obj.position = earth.position
@@ -159,7 +161,8 @@ def calculateInteraction(obj1: SimulationEntity, obj2: SimulationEntity):
             if force is ForceTypes.frictionFluid:
                 relativeSpeed = np.linalg.norm(obj2.velocity - obj1.velocity)
                 density = forceSupplier.getDensityFunction()(forceSupplier, forceReceiver.position)
+                if density == 0: continue
                 area = np.pi * (forceReceiver.radius ** 2)
                 # taken for a sphere
                 effect = 0.9 * density * (relativeSpeed ** 2) * 0.5 * area
-                forceReceiver.force += effect * vecNormalize(obj1.velocity - obj2.velocity)
+                forceReceiver.force += effect * vecNormalize(forceSupplier.velocity - forceReceiver.velocity)
