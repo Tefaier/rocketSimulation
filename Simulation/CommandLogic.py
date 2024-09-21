@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List
 
 from Simulation.Entity import SimulationEntity
+from ReferenceValues import rocketName, earthName, sunName, marsName
 
 class CommandType(Enum):
     gravityTurn = 1
