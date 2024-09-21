@@ -14,6 +14,7 @@ class SimulationEntity:
     name: str
     mass: float
     volume: float
+    radius: float
 
     position: np.array
     velocity: np.array
@@ -26,7 +27,7 @@ class SimulationEntity:
     forcesApplied: list[ForceTypes]
     forcesIgnored: list[ForceTypes]
 
-    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
+    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied = [], forcesIgnored = [], constraintFunction = None, densityFunction = None, radius = None):
         self.name = name
         self.mass = mass
         self.volume = volume
@@ -37,7 +38,8 @@ class SimulationEntity:
         self.forcesApplied = forcesApplied
         self.forcesIgnored = forcesIgnored
         self.constraint = constraintFunction
-        self.buoyancy = buoyancyFunction
+        self.density = densityFunction
+        self.radius = radius
 
     def applyAction(self):
         pass
@@ -54,6 +56,10 @@ class SimulationEntity:
         self.force = np.array([0, 0, 0], dtype=np.float64)
         self.torque = noRotation
 
+    def getDensityFunction(self):
+        return self.density
+
+
 class Rocket(SimulationEntity):
     thrusterForce: float
     thrusterForceMin: float
@@ -63,8 +69,8 @@ class Rocket(SimulationEntity):
 
     distanceThrusterToCenterOfMass: float
 
-    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, thrusterForce, thrusterForceMin, thrusterForceMax, thrusterRotation, thrusterRotationMax, distanceTTCOM, forcesApplied = [], forcesIgnored = [], constraintFunction = None, buoyancyFunction = None):
-        super().__init__(name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied, forcesIgnored, constraintFunction, buoyancyFunction)
+    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, thrusterForce, thrusterForceMin, thrusterForceMax, thrusterRotation, thrusterRotationMax, distanceTTCOM, forcesApplied = [], forcesIgnored = [], constraintFunction = None, densityFunction = None, radius = None):
+        super().__init__(name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied, forcesIgnored, constraintFunction, densityFunction, radius)
         self.thrusterForce = thrusterForce
         self.thrusterForceMin = thrusterForceMin
         self.thrusterForceMax = thrusterForceMax

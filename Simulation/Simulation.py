@@ -1,12 +1,13 @@
 from typing import List
 
+import numpy as np
 import pandas as pd
 
 from Simulation.Entity import *
 import quaternion as quat
 from scipy.spatial.transform import Rotation
 
-from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotationToVector, vectorUp, vecNormalize, rotationToVectorFromBase
+from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotationToVector, vectorUp, vecNormalize, rotationToVectorFromBase, earthAtmosphereDensityFunc
 
 gravityConstant = 6.67e-11
 
@@ -43,6 +44,7 @@ rocketMaxForce = 1486000
 rocketVelocity = earthVelocity
 rocketRotation = earthRotation * Rotation.from_quat(quaternion)
 rocketPosition = earthPosition + (rocketRotation).apply(vectorUp) * earthRadius
+rocketRadius = 1.2
 
 # based on https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D0%B6%D0%B4%D1%83%D0%BD%D0%B0%D1%80%D0%BE%D0%B4%D0%BD%D0%B0%D1%8F_%D0%BA%D0%BE%D1%81%D0%BC%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F_%D1%81%D1%82%D0%B0%D0%BD%D1%86%D0%B8%D1%8F
 mksName = "MKS"
@@ -115,28 +117,49 @@ def checkExitCondition(simulationTime: pd.Timedelta, entities: List[SimulationEn
     return len(data) > 1e2 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
 
 def getSimulationSetup() -> List[SimulationEntity]:
-    def rocketConstraint(obj: SimulationEntity):
-        pass
-        #  obj.rotation = rotationToVector(vectorUp, obj.velocity)
+    earth = SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
+                             rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity],
+                             forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
+    rocket = Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity,
+                    rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
+                    thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10), distanceTTCOM=50,
+                    forcesApplied=[ForceTypes.gravity], radius=rocketRadius)
+    mks = SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
+                           rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity])
 
-    return [
-        SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
-                         rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity], forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid]),
-        Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity,
-               rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
-               thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(10), distanceTTCOM=50,
-               forcesApplied=[ForceTypes.gravity], constraintFunction=rocketConstraint),
-        SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
-                         rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity])
-    ]
+    def earthAtmosphereConstraint(obj: SimulationEntity):
+        obj.position = earth.position
+        obj.velocity = earth.velocity
+
+    def earthAtmosphereDensity(obj: SimulationEntity, pos: np.array) -> float:
+        height = np.linalg.norm(pos - obj.position) - earthRadius
+        return earthAtmosphereDensityFunc(height)
+
+    earthAtmosphere = SimulationEntity(name=earthName+"Atmosphere", mass=None, volume=None, position=earthPosition,
+                                       velocity=earthVelocity, rotation=noRotation, rotationSpeed=noRotation,
+                                       forcesApplied=[ForceTypes.frictionFluid],
+                                       forcesIgnored=[ForceTypes.gravity, ForceTypes.frictionSliding],
+                                       constraintFunction=earthAtmosphereConstraint,
+                                       densityFunction=earthAtmosphereDensity)
+    mars = SimulationEntity(name=marsName, mass=marsMass, volume=None, position=marsPosition, velocity=marsVelocity,
+                            rotation=marsRotation, rotationSpeed=marsRotationSpeed, forcesApplied=[ForceTypes.gravity],
+                            forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
+
+    return [earth, rocket, mks, earthAtmosphere, mars]
 
 def calculateInteraction(obj1: SimulationEntity, obj2: SimulationEntity):
     for force in ForceTypes:
         if (force in obj1.forcesApplied or force in obj2.forcesApplied) and force not in obj1.forcesIgnored and force not in obj2.forcesIgnored:
             forceSupplier = obj1 if force in obj1.forcesApplied else obj2
             forceReceiver = obj1 if obj2 == forceSupplier else obj2
-            effect = np.array
             if force is ForceTypes.gravity:
                 effect = (obj2.position - obj1.position) * gravityConstant * obj1.mass * obj2.mass / (np.linalg.norm(obj2.position - obj1.position) ** 3)
                 obj1.force += effect
                 obj2.force -= effect
+            if force is ForceTypes.frictionFluid:
+                relativeSpeed = np.linalg.norm(obj2.velocity - obj1.velocity)
+                density = forceSupplier.getDensityFunction()(forceSupplier, forceReceiver.position)
+                area = np.pi * (forceReceiver.radius ** 2)
+                # taken for a sphere
+                effect = 0.9 * density * (relativeSpeed ** 2) * 0.5 * area
+                forceReceiver.force += effect * vecNormalize(obj1.velocity - obj2.velocity)
