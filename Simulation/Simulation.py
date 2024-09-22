@@ -71,8 +71,8 @@ def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity], comm
         for obj in entities:
             if obj.mass is not None and obj.mass != 0:
                 acceleration = obj.force / obj.mass
+                obj.position += obj.velocity * frameTime.seconds + acceleration * (frameTime.seconds ** 2) * 0.5
                 obj.velocity += acceleration * frameTime.seconds
-                obj.position += obj.velocity * frameTime.seconds
 
             obj.rotationSpeed = Rotation.from_rotvec(obj.torque.as_rotvec() * frameTime.seconds) * obj.rotationSpeed
             obj.rotation = Rotation.from_rotvec(obj.rotationSpeed.as_rotvec() * frameTime.seconds) * obj.rotation
