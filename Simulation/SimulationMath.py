@@ -10,6 +10,11 @@ from Simulation.Entity import SimulationEntity
 noRotation = Rotation.from_euler('x', 0)
 vectorUp = np.array([0, 0, 1])
 
+
+
+def vectorLerp(vec1: np.array, vec2: np.array, ratio: float):
+    return (1 - ratio) * vec1 + ratio * vec2
+
 def setRotationAngle(rot: Rotation, angle: float, degrees: bool = False) -> Rotation:
     vec = rot.as_rotvec()
     return Rotation.from_rotvec(vecNormalize(vec) * angle, degrees=degrees)

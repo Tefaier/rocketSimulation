@@ -3,11 +3,12 @@ from typing import List
 
 import numpy as np
 from scipy.spatial.transform import Rotation
+import numpy.polynomial.polynomial as poly
 
-from Simulation.Entity import SimulationEntity
+from Simulation.Entity import SimulationEntity, Rocket
 from ReferenceValues import rocketName, earthName, sunName, marsName
 from Simulation.SimulationMath import angleBetweenVectors, getPerpendicularVector, vecNormalize, rotationToVector, \
-    setRotationAngle
+    setRotationAngle, vectorLerp
 
 
 class CommandType(Enum):
@@ -23,30 +24,50 @@ class Command:
 
     def executeCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         if self.type == CommandType.gravityTurn:
-            # required fields are referenceObject, targetSpeed, maximumDistance, maximumAngleForceToReferenceObject, attackAngleFunction
+            # required fields are referenceObject, targetSpeed, maximumDistance, maximumAngleForceToReferenceObject, attackAngleFunction, enforceDirectionRatio(angle of deviation)
             return self.gravityTurnCommand(entities)
 
     def gravityTurnCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         refObj = entities[self.properties["referenceObject"]]
-        rocket = entities[rocketName]
+        rocket: Rocket = entities[rocketName]  # just ignore
         # angle to have velocity at from radius vector from referenceObject
         targetAttackAngle = self.properties["attackAngleFunction"](np.linalg.norm(refObj.position - rocket.position))
         # choose direction for force
         normVector: np.array
-        forceDirection: np.array
+        attackVector: np.array  # direction in which rocket wants velocity to be in
         if np.linalg.norm(rocket.velocity) < 0.1:
             normVector = vecNormalize(getPerpendicularVector(refObj.position - rocket.position))
-            forceDirection = Rotation.from_rotvec(normVector * targetAttackAngle).apply(rocket.position - refObj.position)
+            attackVector = Rotation.from_rotvec(normVector * targetAttackAngle).apply(rocket.position - refObj.position)
         else:
+            # norm = 1
             normVector = np.cross(refObj.position - rocket.position, rocket.velocity)
-            forceDirection = setRotationAngle(
+            attackVector = vecNormalize(setRotationAngle(
                 rotationToVector(
                     rocket.position - refObj.position,
                     rocket.velocity
                 ),
                 targetAttackAngle
-            ).apply(rocket.position - refObj.position)
+            ).apply(rocket.position - refObj.position))
 
+        # for now it's made so depending on ignoring effect of torque
+        # norm = 1
+        speedRotateForceDirection = setRotationAngle(rotationToVector(rocket.velocity, attackVector), 90, True).apply(vecNormalize(rocket.velocity))
+        decidedDirection = vecNormalize(vectorLerp(
+            attackVector,
+            speedRotateForceDirection,
+            self.properties["enforceDirectionRatio"](angleBetweenVectors(rocket.velocity, attackVector))))
+        # force that is needed to acquire maximum possible resultant force in the direction of decidedDirection
+        x = rocket.force[0]
+        y = rocket.force[1]
+        z = rocket.force[2]
+        xt = decidedDirection[0]
+        yt = decidedDirection[1]
+        zt = decidedDirection[2]
+        force = rocket.thrusterForceMax
+        # equation for where desiredDirection is intersected by circle of to be applied force radius with center in current force point
+        roots = poly.polyroots([x*x + y*y + z*z - force**2, -2*(x*xt + y*yt + z*zt), xt*xt + yt*yt + zt*zt])
+        forceToApply = max(roots) * decidedDirection - rocket.force
+        rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
 
         return self.gravityTurnExitCondition(entities)
 

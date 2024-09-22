@@ -4,6 +4,9 @@ import numpy as np
 from quaternion import quaternion
 from scipy.spatial.transform import Rotation
 
+from Simulation.SimulationMath import rotationToVectorFromBase, vectorUp, rotationToVector
+
+
 class ForceTypes(Enum):
     gravity = 1,
     buoyancy = 2,
@@ -78,10 +81,10 @@ class Rocket(SimulationEntity):
         self.thrusterRotationMax = thrusterRotationMax
         self.distanceThrusterToCenterOfMass = distanceTTCOM
 
-    def changeThrusterConfig(self, thrusterForce: float, thrusterRotation: Rotation):
+    def changeThrusterConfig(self, thrusterForce: float, forceDirection: np.array):
         self.thrusterForce = max(min(thrusterForce, self.thrusterForceMax), self.thrusterForceMin)
         # unfinished - Rotation input may affect restriction to be lower than should be
-        rotationVec = thrusterRotation.as_rotvec()
+        rotationVec = rotationToVector(self.rotation.apply(vectorUp), forceDirection).as_rotvec()
         if np.linalg.norm(rotationVec) == 0:
             from Simulation.SimulationMath import noRotation
             self.thrusterRotation = noRotation
