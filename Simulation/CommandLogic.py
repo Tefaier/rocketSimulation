@@ -24,7 +24,7 @@ class Command:
 
     def executeCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         if self.type == CommandType.gravityTurn:
-            # required fields are referenceObject, targetSpeed, maximumDistance, maximumAngleForceToReferenceObject, attackAngleFunction, enforceDirectionRatio(angle of deviation)
+            # required fields are referenceObject, targetSpeed, maximumDistance, maximumAngleForceToReferenceObject, attackAngleFunction(distance from referenceObject), enforceDirectionRatio(angle of deviation)
             return self.gravityTurnCommand(entities)
 
     def gravityTurnCommand(self, entities: dict[str, SimulationEntity]) -> bool:
