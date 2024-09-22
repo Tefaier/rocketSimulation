@@ -74,8 +74,8 @@ def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity], comm
                 obj.velocity += acceleration * frameTime.seconds
                 obj.position += obj.velocity * frameTime.seconds
 
-            obj.rotationSpeed *= Rotation.from_rotvec(obj.torque.as_rotvec() * frameTime.seconds)
-            obj.rotation *= Rotation.from_rotvec(obj.rotationSpeed.as_rotvec() * frameTime.seconds)
+            obj.rotationSpeed = Rotation.from_rotvec(obj.torque.as_rotvec() * frameTime.seconds) * obj.rotationSpeed
+            obj.rotation = Rotation.from_rotvec(obj.rotationSpeed.as_rotvec() * frameTime.seconds) * obj.rotation
 
     def applyConstraints():
         for obj in entities:
