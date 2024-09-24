@@ -28,7 +28,7 @@ def magnitudeOfProjection(vecToProject: np.array, vecToProjectOn: np.array) -> f
 def angleBetweenVectors(vec1: np.array, vec2: np.array) -> float:
     len1 = np.linalg.norm(vec1)
     len2 = np.linalg.norm(vec2)
-    cos = np.dot(vec1, vec2) / (len1 * len2)
+    cos = min(np.dot(vec1, vec2) / (len1 * len2), 0)
     return math.acos(cos)
 
 def distanceBetweenObjects(obj1: SimulationEntity, obj2: SimulationEntity) -> float:

@@ -73,7 +73,6 @@ class Command:
         roots = poly.polyroots([x*x + y*y + z*z - force**2, -2*(x*xt + y*yt + z*zt), xt*xt + yt*yt + zt*zt])
         forceToApply = max(roots) * decidedDirection - rocket.force
         rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
-        print("Relative velocity ",relativeVelocity, "\nRelative position ", rocket.position - refObj.position, "\nDistance ", np.linalg.norm(refObj.position - rocket.position), "\nForce on rocket", rocket.force, "\nApplied force ", forceToApply)
 
         return self.gravityTurnExitCondition(entities)
 
