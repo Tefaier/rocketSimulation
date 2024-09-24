@@ -4,12 +4,16 @@ class PrimitiveCamera:
         self.height_coord = height_coord
         self.wight_axis_name = wight_axis_name
         self.height_axis_name = height_axis_name
+        self.orientation = (-1) ** ((wight_coord + 1) % 3 != height_coord)
 
     def first_coord(self):
         return self.wight_coord
 
     def second_coord(self):
         return self.height_coord
+
+    def third_coord(self):
+        return ({0, 1, 2} - {self.second_coord(), self.first_coord()}).pop()
 
     def first_axis_name(self):
         return self.wight_axis_name
