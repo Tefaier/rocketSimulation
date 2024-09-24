@@ -78,11 +78,13 @@ class Rocket(SimulationEntity):
         self.thrusterRotationMax = thrusterRotationMax
         self.distanceThrusterToCenterOfMass = distanceTTCOM
 
-    def changeThrusterConfig(self, thrusterForce: float, forceDirection: np.array):
+    def changeThrusterConfig(self, thrusterForce: float, forceDirection):
         from Simulation.SimulationMath import vectorUp, rotationToVector, vecNormalize
 
         self.thrusterForce = max(min(thrusterForce, self.thrusterForceMax), self.thrusterForceMin)
-        # unfinished - Rotation input may affect restriction to be lower than should be
+        if type(forceDirection) == Rotation:
+            #self.thrusterRotation = forceDirection
+            return
         rotationVec = rotationToVector(self.rotation.apply(vectorUp), forceDirection).as_rotvec()
         if np.linalg.norm(rotationVec) == 0:
             from Simulation.SimulationMath import noRotation
@@ -94,7 +96,8 @@ class Rocket(SimulationEntity):
     def applyAction(self):
         self.force += self.thrusterForce * self.thrusterRotation.apply(self.rotation.apply(np.array([0, 0, 1])))
 
+
         # due to torque being not fully supported yet, it's made this way
-        vectorToCenterOfMass = self.distanceThrusterToCenterOfMass * (self.rotation).apply(np.array([0, 0, 1]))
-        self.torque = Rotation.from_rotvec(np.cross(self.force, vectorToCenterOfMass) / self.mass)
+        #vectorToCenterOfMass = self.distanceThrusterToCenterOfMass * (self.rotation).apply(np.array([0, 0, 1]))
+        #self.torque = Rotation.from_rotvec(np.cross(self.force, vectorToCenterOfMass) / self.mass)
 

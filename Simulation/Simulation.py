@@ -17,15 +17,21 @@ def startSimulation(
                 CommandType.gravityTurn,
                 {
                     "referenceObject": earthName,
-                    "targetSpeed": 10000,
+                    "targetSpeed": 30000,
                     "maximumDistance": earthRadius + 1e7,
                     "maximumAngleForceToReferenceObject": np.pi * 0.2,
                     "attackAngleFunction": interp1d(
                         x=[0, earthRadius, earthRadius + 2e3, earthRadius + 1e4, earthRadius + 2e4, earthRadius + 1e5, earthRadius + 1.1e7],
                         y=[0, 0, np.pi / 18, np.pi / 7, np.pi / 5, np.pi / 3, np.pi / 2.2],
-                        kind="quadratic", assume_sorted=True),
+                        kind="linear", assume_sorted=True),
                     "enforceDirectionRatio": (lambda angle: 0)
                  }
+            ),
+            Command(
+                CommandType.simpleMove,
+                {
+                    "force": 1e6
+                }
             )
         ]):
     commands.reverse()
@@ -96,13 +102,18 @@ def checkExitCondition(simulationTime: pd.Timedelta, entities: List[SimulationEn
     return len(data) > 1e2 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
 
 def getSimulationSetup() -> List[SimulationEntity]:
+    def rocketConstraint(obj: Rocket):
+        obj.torque = noRotation
+        obj.rotationSpeed = noRotation
+        obj.rotation = noRotation
+
     earth = SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
                              rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity],
                              forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
     rocket = Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity,
                     rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
                     thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(190), distanceTTCOM=50,  #  limit on thruster rotation is effectively removed
-                    forcesApplied=[ForceTypes.gravity], radius=rocketRadius)
+                    forcesApplied=[ForceTypes.gravity], radius=rocketRadius, constraintFunction=rocketConstraint)
     mks = SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
                            rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity],
                            forcesIgnored=[ForceTypes.frictionFluid])

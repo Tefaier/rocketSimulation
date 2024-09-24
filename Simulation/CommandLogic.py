@@ -8,11 +8,12 @@ import numpy.polynomial.polynomial as poly
 from Simulation.Entity import SimulationEntity, Rocket
 from Simulation.ReferenceValues import rocketName, earthName, sunName, marsName
 from Simulation.SimulationMath import angleBetweenVectors, getPerpendicularVector, vecNormalize, rotationToVector, \
-    setRotationAngle, vectorLerp
+    setRotationAngle, vectorLerp, noRotation
 
 
 class CommandType(Enum):
     gravityTurn = 1
+    simpleMove = 2
 
 class Command:
     type: CommandType
@@ -26,6 +27,9 @@ class Command:
         if self.type == CommandType.gravityTurn:
             # required fields are referenceObject, targetSpeed, maximumDistance, maximumAngleForceToReferenceObject, attackAngleFunction(distance from referenceObject), enforceDirectionRatio(angle of deviation)
             return self.gravityTurnCommand(entities)
+        if self.type == CommandType.simpleMove:
+            # required fields are force
+            return self.simpleMoveCommand(entities)
 
     def gravityTurnCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         refObj = entities[self.properties["referenceObject"]]
@@ -73,6 +77,7 @@ class Command:
         roots = poly.polyroots([x*x + y*y + z*z - force**2, -2*(x*xt + y*yt + z*zt), xt*xt + yt*yt + zt*zt])
         forceToApply = max(roots) * decidedDirection - rocket.force
         rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
+        print("Relative velocity ",relativeVelocity, "\nRelative position ", rocket.position - refObj.position, "\nDistance ", np.linalg.norm(refObj.position - rocket.position), "\nAttack angle", targetAttackAngle)
 
         return self.gravityTurnExitCondition(entities)
 
@@ -83,4 +88,13 @@ class Command:
                 or np.linalg.norm(rocket.position - refObj.position) > self.properties["maximumDistance"]\
                 or angleBetweenVectors(rocket.force, refObj.position - rocket.position) > self.properties["maximumAngleForceToReferenceObject"]:
             return True
+        return False
+
+    def simpleMoveCommand(self, entities: dict[str, SimulationEntity]) -> bool:
+        rocket: Rocket = entities[rocketName]
+        rocket.changeThrusterConfig(self.properties["force"], noRotation)
+
+        return self.simpleMoveExitCondition(entities)
+
+    def simpleMoveExitCondition(self, entities: dict[str, SimulationEntity]) -> bool:
         return False
