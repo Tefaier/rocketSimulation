@@ -33,7 +33,7 @@ class Command:
             # required fields are force, targetName - may be None
             return self.simpleMoveCommand(entities)
         if self.type == CommandType.hohmannTransfer:
-            # required fields are targetObject, orbitAround
+            # required fields are targetObject, orbitAround, acceptedError, timeStep, acceptedOffset
             return self.hohmannTransferCommand(entities)
 
     def gravityTurnCommand(self, entities: dict[str, SimulationEntity]) -> bool:
@@ -126,18 +126,60 @@ class Command:
             ).apply(rocket.position - orbitObject.position))
             achievedTo = magnitudeOfProjection(relativeVelocity, desiredDirection)
             removeTang = math.sqrt(relativeVelocity ** 2 - achievedTo ** 2)
+
+            estimatedError = abs(1 - achievedTo / self.properties["ellipseSpeed"]) + abs(removeTang / self.properties["ellipseSpeed"])
+            if estimatedError < self.properties["acceptedError"]:
+                self.properties["state"] = 1
+                return False
+
             speedRotateForceDirection = setRotationAngle(rotationToVector(relativeVelocity, desiredDirection), 90,
                                                          True).apply(vecNormalize(relativeVelocity))
-            decidedDirection = vecNormalize(vectorLerp(
-                desiredDirection,
-                speedRotateForceDirection,
-                self.properties["enforceDirectionRatio"](angleBetweenVectors(relativeVelocity, desiredDirection))))
+            rotateForceMagnitude = rocket.mass * removeTang / self.properties["timeStep"].seconds
+            forceToApply = speedRotateForceDirection * rotateForceMagnitude
+
+            if rotateForceMagnitude < rocket.thrusterForceMax:
+                leftForceMagnitude = math.sqrt(rocket.thrusterForceMax ** 2 - rotateForceMagnitude ** 2)
+                velocityChangeInTo = self.properties["ellipseSpeed"] - achievedTo
+                forceToApply += vecNormalize(velocityChangeInTo) * min(leftForceMagnitude, rocket.mass * np.linalg.norm(velocityChangeInTo) / self.properties["timeStep"].seconds)
+
+            rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
+
         elif self.properties["state"] == 1:
-            pass
+            if np.linalg(rocket.position - orbitObject.position) + self.properties["acceptedOffset"] >= np.linalg(targetObject.position - orbitObject.position):
+                self.properties["state"] = 2
         elif self.properties["state"] == 2:
-            pass
+            desiredDirection = vecNormalize(setRotationAngle(
+                rotationToVector(
+                    rocket.position - orbitObject.position,
+                    relativeVelocity
+                ),
+                np.pi / 2
+            ).apply(rocket.position - orbitObject.position))
+            achievedTo = magnitudeOfProjection(relativeVelocity, desiredDirection)
+            removeTang = math.sqrt(relativeVelocity ** 2 - achievedTo ** 2)
+
+            orbitSpeed2 = np.linalg.norm(targetObject.velocity - orbitObject.velocity)
+            estimatedError = abs(1 - achievedTo / orbitSpeed2) + abs(
+                removeTang / orbitSpeed2)
+            if estimatedError < self.properties["acceptedError"]:
+                self.properties["state"] = 3
+                return False
+
+            speedRotateForceDirection = setRotationAngle(rotationToVector(relativeVelocity, desiredDirection), 90,
+                                                         True).apply(vecNormalize(relativeVelocity))
+            rotateForceMagnitude = rocket.mass * removeTang / self.properties["timeStep"].seconds
+            forceToApply = speedRotateForceDirection * rotateForceMagnitude
+
+            if rotateForceMagnitude < rocket.thrusterForceMax:
+                leftForceMagnitude = math.sqrt(rocket.thrusterForceMax ** 2 - rotateForceMagnitude ** 2)
+                velocityChangeInTo = orbitSpeed2 - achievedTo
+                forceToApply += vecNormalize(velocityChangeInTo) * min(leftForceMagnitude, rocket.mass * np.linalg.norm(
+                    velocityChangeInTo) / self.properties["timeStep"].seconds)
+
+            rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
 
         return self.hohmannTransferExitCondition(entities)
 
     def hohmannTransferExitCondition(self, entities: dict[str, SimulationEntity]) -> bool:
         return self.properties["state"] == 3
+

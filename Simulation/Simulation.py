@@ -28,9 +28,13 @@ def startSimulation(
                  }
             ),
             Command(
-                CommandType.simpleMove,
+                CommandType.hohmannTransfer,
                 {
-                    "force": 1e6
+                    "targetObject": marsName,
+                    "orbitAround": sunName,
+                    "acceptedError": 0.001,
+                    "timeStep": pd.Timedelta(seconds = 1),
+                    "acceptedOffset": 1e4
                 }
             )
         ]):
