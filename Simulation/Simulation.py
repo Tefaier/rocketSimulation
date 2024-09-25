@@ -28,6 +28,12 @@ def startSimulation(
                  }
             ),
             Command(
+              CommandType.simpleMove,
+                {
+                    "force": 1e5
+                }
+            ),
+            Command(
                 CommandType.hohmannTransfer,
                 {
                     "targetObject": marsName,
@@ -139,8 +145,11 @@ def getSimulationSetup() -> List[SimulationEntity]:
     mars = SimulationEntity(name=marsName, mass=marsMass, volume=None, position=marsPosition, velocity=marsVelocity,
                             rotation=marsRotation, rotationSpeed=marsRotationSpeed, forcesApplied=[ForceTypes.gravity],
                             forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
+    sun = SimulationEntity(name=sunName, mass=sunMass, volume=None, position=sunPosition, velocity=np.array([0, 0, 0]),
+                           rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity],
+                           forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
 
-    return [earth, rocket, mks, earthAtmosphere, mars]
+    return [earth, rocket, mks, earthAtmosphere, mars, sun]
 
 def calculateInteraction(obj1: SimulationEntity, obj2: SimulationEntity):
     for force in ForceTypes:
