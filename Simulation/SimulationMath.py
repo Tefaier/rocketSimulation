@@ -5,7 +5,7 @@ import numpy as np
 import quaternion as quat
 from scipy.spatial.transform import Rotation
 
-from Simulation.Entity import SimulationEntity
+from Simulation.Entity import SimulationEntity, Rocket
 
 noRotation = Rotation.from_euler('x', 0)
 vectorUp = np.array([0, 0, 1])
@@ -14,6 +14,12 @@ vectorUp = np.array([0, 0, 1])
 
 def vectorLerp(vec1: np.array, vec2: np.array, ratio: float):
     return (1 - ratio) * vec1 + ratio * vec2
+
+def getOverload(obj: Rocket) -> float:
+    from Simulation.ReferenceValues import earthAccelerationFreeFall
+    acceleration = obj.force / obj.mass
+    result_acceleration = math.sqrt(sum(list(x ** 2 for x in acceleration)))
+    return (result_acceleration + earthAccelerationFreeFall) / earthAccelerationFreeFall;
 
 def setRotationAngle(rot: Rotation, angle: float, degrees: bool = False) -> Rotation:
     vec = rot.as_rotvec()

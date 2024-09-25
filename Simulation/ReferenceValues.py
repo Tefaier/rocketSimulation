@@ -4,6 +4,7 @@ import quaternion as quat
 from Simulation.SimulationMath import vecNormalize, vectorUp, rotationToVectorFromBase
 
 gravityConstant = 6.67e-11
+earthAccelerationFreeFall = 9.80665;
 
 earthName = "Earth"
 earthRadius = 6378000

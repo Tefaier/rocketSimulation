@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 from scipy.spatial.transform import Rotation
 import numpy.polynomial.polynomial as poly
+from Simulation.SimulationMath import getOverload
 
 from Simulation.Entity import SimulationEntity, Rocket
 from Simulation.ReferenceValues import rocketName, earthName, sunName, marsName, gravityConstant
@@ -82,7 +83,7 @@ class Command:
         roots = poly.polyroots([x*x + y*y + z*z - force**2, -2*(x*xt + y*yt + z*zt), xt*xt + yt*yt + zt*zt])
         forceToApply = max(roots) * decidedDirection - rocket.force
         rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
-        print("Relative velocity ",relativeVelocity, "\nRelative position ", rocket.position - refObj.position, "\nDistance ", np.linalg.norm(refObj.position - rocket.position), "\nAttack angle", targetAttackAngle)
+        print("Relative velocity ",relativeVelocity, "\nRelative position ", rocket.position - refObj.position, "\nDistance ", np.linalg.norm(refObj.position - rocket.position), "\nAttack angle", targetAttackAngle, "\nAcceleration: ", rocket.force / rocket.mass, "\nOverload: ", getOverload(rocket))
 
         return self.gravityTurnExitCondition(entities)
 
