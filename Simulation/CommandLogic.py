@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 from typing import List
 
@@ -6,14 +7,15 @@ from scipy.spatial.transform import Rotation
 import numpy.polynomial.polynomial as poly
 
 from Simulation.Entity import SimulationEntity, Rocket
-from Simulation.ReferenceValues import rocketName, earthName, sunName, marsName
+from Simulation.ReferenceValues import rocketName, earthName, sunName, marsName, gravityConstant
 from Simulation.SimulationMath import angleBetweenVectors, getPerpendicularVector, vecNormalize, rotationToVector, \
-    setRotationAngle, vectorLerp, noRotation
+    setRotationAngle, vectorLerp, noRotation, magnitudeOfProjection
 
 
 class CommandType(Enum):
     gravityTurn = 1
     simpleMove = 2
+    hohmannTransfer = 3
 
 class Command:
     type: CommandType
@@ -28,8 +30,11 @@ class Command:
             # required fields are referenceObject, targetSpeed, maximumDistance, maximumAngleForceToReferenceObject, attackAngleFunction(distance from referenceObject), enforceDirectionRatio(angle of deviation)
             return self.gravityTurnCommand(entities)
         if self.type == CommandType.simpleMove:
-            # required fields are force
+            # required fields are force, targetName - may be None
             return self.simpleMoveCommand(entities)
+        if self.type == CommandType.hohmannTransfer:
+            # required fields are targetObject, orbitAround
+            return self.hohmannTransferCommand(entities)
 
     def gravityTurnCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         refObj = entities[self.properties["referenceObject"]]
@@ -92,9 +97,47 @@ class Command:
 
     def simpleMoveCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         rocket: Rocket = entities[rocketName]
-        rocket.changeThrusterConfig(self.properties["force"], noRotation)
+        rocket.changeThrusterConfig(self.properties["force"], (entities[self.properties["targetName"]].position - rocket.position) if self.properties.get("targetName") is not None else noRotation)
 
         return self.simpleMoveExitCondition(entities)
 
     def simpleMoveExitCondition(self, entities: dict[str, SimulationEntity]) -> bool:
         return False
+
+    def hohmannTransferCommand(self, entities: dict[str, SimulationEntity]) -> bool:
+        rocket: Rocket = entities[rocketName]
+        orbitObject = entities[self.properties["orbitAround"]]
+        targetObject = entities[self.properties["targetObject"]]
+        relativeVelocity = rocket.velocity - orbitObject.velocity
+        if self.properties.get("state") is None:
+            self.properties["state"] = 0
+            orbitSpeed1 = math.sqrt(gravityConstant * orbitObject.mass / (np.linalg.norm(rocket.position - orbitObject.position)))
+            orbitSpeed2 = np.linalg.norm(targetObject.velocity - orbitObject.velocity)
+            speedR = math.sqrt((orbitSpeed1 ** 2 + orbitSpeed2 ** 2) / 2)
+            self.properties["ellipseSpeed"] = orbitSpeed1 * orbitSpeed1 / speedR
+
+        if self.properties["state"] == 0:
+            desiredDirection = vecNormalize(setRotationAngle(
+                rotationToVector(
+                    rocket.position - orbitObject.position,
+                    relativeVelocity
+                ),
+                np.pi / 2
+            ).apply(rocket.position - orbitObject.position))
+            achievedTo = magnitudeOfProjection(relativeVelocity, desiredDirection)
+            removeTang = math.sqrt(relativeVelocity ** 2 - achievedTo ** 2)
+            speedRotateForceDirection = setRotationAngle(rotationToVector(relativeVelocity, desiredDirection), 90,
+                                                         True).apply(vecNormalize(relativeVelocity))
+            decidedDirection = vecNormalize(vectorLerp(
+                desiredDirection,
+                speedRotateForceDirection,
+                self.properties["enforceDirectionRatio"](angleBetweenVectors(relativeVelocity, desiredDirection))))
+        elif self.properties["state"] == 1:
+            pass
+        elif self.properties["state"] == 2:
+            pass
+
+        return self.hohmannTransferExitCondition(entities)
+
+    def hohmannTransferExitCondition(self, entities: dict[str, SimulationEntity]) -> bool:
+        return self.properties["state"] == 3
