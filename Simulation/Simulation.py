@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+import pandas as pd
 
 from Simulation.ReferenceValues import *
 from Simulation.CommandLogic import Command, CommandType
@@ -10,8 +11,10 @@ from scipy.interpolate import interp1d
 
 from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotationToVector, vectorUp, vecNormalize, rotationToVectorFromBase, earthAtmosphereDensityFunc
 
+timeUnitUsed = {}
+
 def startSimulation(
-        timeUnit = pd.Timedelta(seconds = 1),
+        timeUnit = pd.Timedelta(seconds = 10),
         commands=None):
     if commands is None:
         commands = [
@@ -42,6 +45,7 @@ def startSimulation(
             )
         ]
     commands.reverse()
+    timeUnitUsed["time"] = timeUnit
 
     entities = getSimulationSetup()
     trackedEntities = entities
@@ -56,8 +60,8 @@ def startSimulation(
 
     while True:
         collectedData.append([simulationTime, collectData(trackedEntities)])
-        executeFrame(timeUnit, entities, commands, entitiesDictionary, simulationTime)
-        simulationTime += timeUnit
+        executeFrame(timeUnitUsed["time"], entities, commands, entitiesDictionary, simulationTime)
+        simulationTime += timeUnitUsed["time"]
         if checkExitCondition(simulationTime, entities, collectedData): break
 
     print("Simulation ended")
@@ -106,7 +110,7 @@ def collectData(entities: List[SimulationEntity]) -> list:
 def checkExitCondition(simulationTime: pd.Timedelta, entities: List[SimulationEntity], data: list) -> bool:
     rocket = next(x for x in entities if x.name == rocketName)
     earth = next(x for x in entities if x.name == earthName)
-    return len(data) > 1e4 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
+    return len(data) > 1e5 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
 
 def getSimulationSetup() -> List[SimulationEntity]:
     def rocketConstraint(obj: Rocket):

@@ -119,7 +119,7 @@ class Command:
             orbitSpeed1 = math.sqrt(gravityConstant * orbitObject.mass / (np.linalg.norm(rocket.position - orbitObject.position)))
             orbitSpeed2 = np.linalg.norm(targetObject.velocity - orbitObject.velocity)
             speedR = math.sqrt((orbitSpeed1 ** 2 + orbitSpeed2 ** 2) / 2)
-            self.properties["ellipseSpeed"] = orbitSpeed1 * orbitSpeed1 / speedR
+            self.properties["ellipseSpeed"] = 1.03 * orbitSpeed1 * orbitSpeed1 / speedR
         if self.properties.get("state") == 0:
             self.properties["state"] = 1
 
@@ -131,31 +131,18 @@ class Command:
                 ),
                 np.pi / 2
             ).apply(rocket.position - orbitObject.position))
-            achievedTo = magnitudeOfProjection(relativeVelocity, desiredDirection)
-            removeTang = math.tan(angleBetweenVectors(relativeVelocity, desiredDirection)) * np.linalg.norm(relativeVelocity)
-
-            estimatedError = abs(1 - achievedTo / self.properties["ellipseSpeed"]) + abs(removeTang / self.properties["ellipseSpeed"])
-            print(f"Current error: {estimatedError}, changeTo: {self.properties['ellipseSpeed'] - achievedTo}, removeTang: {removeTang}")
-            if estimatedError < self.properties["acceptedError"]:
+            if self.getDesiredVelocity(self.properties["acceptedError"], rocket, relativeVelocity, desiredDirection, self.properties["ellipseSpeed"]):
+                from Simulation.Simulation import timeUnitUsed
+                timeUnitUsed["time"] *= 100
+                rocket.changeThrusterConfig(0, noRotation)
                 self.properties["state"] = 2
                 return False
-
-            speedRotateForceDirection = setRotationAngle(rotationToVector(relativeVelocity, desiredDirection), 90,
-                                                         True).apply(vecNormalize(relativeVelocity))
-            rotateForceMagnitude = rocket.mass * removeTang / self.properties["timeStep"].seconds - magnitudeOfProjection(rocket.force, speedRotateForceDirection)
-            forceToApply = speedRotateForceDirection * rotateForceMagnitude
-
-            if rotateForceMagnitude < rocket.thrusterForceMax:
-                leftForceMagnitude = math.sqrt(rocket.thrusterForceMax ** 2 - rotateForceMagnitude ** 2)
-                velocityChangeInTo = self.properties["ellipseSpeed"] - achievedTo
-                forceToApply += vecNormalize(velocityChangeInTo) * min(leftForceMagnitude, rocket.mass * np.linalg.norm(velocityChangeInTo) / self.properties["timeStep"].seconds)
-
-            rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
-
         elif self.properties["state"] == 2:
-            print(f"Rocket to sun: {np.linalg.norm(rocket.position - orbitObject.position)} \nRocket to mars {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
-            if abs(np.linalg.norm(rocket.position - orbitObject.position) - np.linalg.norm(targetObject.position - orbitObject.position)) <= self.properties["acceptedOffset"]:
-                self.properties["state"] = 2
+            print(f"Rocket to mars orbit {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
+            if np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position) <= self.properties["acceptedOffset"]:
+                from Simulation.Simulation import timeUnitUsed
+                timeUnitUsed["time"] /= 100
+                self.properties["state"] = 3
         elif self.properties["state"] == 3:
             desiredDirection = vecNormalize(setRotationAngle(
                 rotationToVector(
@@ -164,28 +151,10 @@ class Command:
                 ),
                 np.pi / 2
             ).apply(rocket.position - orbitObject.position))
-            achievedTo = magnitudeOfProjection(relativeVelocity, desiredDirection)
-            removeTang = math.tan(angleBetweenVectors(relativeVelocity, desiredDirection)) * np.linalg.norm(relativeVelocity)
-
             orbitSpeed2 = np.linalg.norm(targetObject.velocity - orbitObject.velocity)
-            estimatedError = abs(1 - achievedTo / orbitSpeed2) + abs(
-                removeTang / orbitSpeed2)
-            if estimatedError < self.properties["acceptedError"]:
+            if self.getDesiredVelocity(self.properties["acceptedError"], rocket, relativeVelocity, desiredDirection, orbitSpeed2):
                 self.properties["state"] = 4
                 return False
-
-            speedRotateForceDirection = setRotationAngle(rotationToVector(relativeVelocity, desiredDirection), 90,
-                                                         True).apply(vecNormalize(relativeVelocity))
-            rotateForceMagnitude = rocket.mass * removeTang / self.properties["timeStep"].seconds  - magnitudeOfProjection(rocket.force, speedRotateForceDirection)
-            forceToApply = speedRotateForceDirection * rotateForceMagnitude
-
-            if rotateForceMagnitude < rocket.thrusterForceMax:
-                leftForceMagnitude = math.sqrt(rocket.thrusterForceMax ** 2 - rotateForceMagnitude ** 2)
-                velocityChangeInTo = orbitSpeed2 - achievedTo
-                forceToApply += vecNormalize(velocityChangeInTo) * min(leftForceMagnitude, rocket.mass * np.linalg.norm(
-                    velocityChangeInTo) / self.properties["timeStep"].seconds)
-
-            rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
 
         return self.hohmannTransferExitCondition(entities)
 
@@ -205,3 +174,29 @@ class Command:
         rocket: Rocket = entities[rocketName]
         targetObject = entities[self.properties["targetObject"]]
         return np.linalg.norm(rocket.position - targetObject.position) < self.properties["acceptedOffset"]
+
+    def getDesiredVelocity(self, error: float, rocket: Rocket, relativeVelocity: np.array, desiredDirection: np.array, desiredSpeed: float) -> bool:
+        achievedTo = magnitudeOfProjection(relativeVelocity, desiredDirection)
+        angleToChange = angleBetweenVectors(relativeVelocity, desiredDirection)
+        removeTang = math.tan(angleToChange) * np.linalg.norm(relativeVelocity)
+
+        estimatedError = abs(1 - achievedTo / desiredSpeed) + abs(removeTang / desiredSpeed)
+        print(f"Current error: {estimatedError}, changeTo: {desiredSpeed - achievedTo}, removeTang: {removeTang}")
+        if estimatedError < error:
+            return True
+
+        speedRotateForceDirection = setRotationAngle(rotationToVector(relativeVelocity, desiredDirection), math.pi / 2 + angleToChange,
+                                                     False).apply(vecNormalize(relativeVelocity))
+        rotateForceMagnitude = rocket.mass * removeTang / self.properties["timeStep"].seconds - magnitudeOfProjection(
+            rocket.force, speedRotateForceDirection)
+        forceToApply = speedRotateForceDirection * rotateForceMagnitude
+
+        if rotateForceMagnitude < rocket.thrusterForceMax:
+            leftForceMagnitude = math.sqrt(rocket.thrusterForceMax ** 2 - rotateForceMagnitude ** 2)
+            speedChangeInTo = desiredSpeed - achievedTo
+            forceToApply += (vecNormalize(desiredDirection) *
+                             min(leftForceMagnitude, rocket.mass * abs(speedChangeInTo) / self.properties["timeStep"].seconds - magnitudeOfProjection(rocket.force, desiredDirection)) *
+                             (1 if speedChangeInTo > 0 else -1))
+
+        rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
+        return False
