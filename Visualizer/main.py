@@ -9,7 +9,7 @@ from Visualizer.Cameras import camera_xy, camera_xz, camera_yz
 if __name__ == "__main__":
     screen_width = 1280
     screen_height = 720
-    real_time_per_tick = pandas.Timedelta(minutes=0, seconds=60)
+    real_time_per_tick = pandas.Timedelta(minutes=0, seconds=10)
     screen_ratio_step = 1.1
     frame_per_second_step = 20
     chosen_camera = camera_xy
