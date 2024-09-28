@@ -17,6 +17,7 @@ class CommandType(Enum):
     gravityTurn = 1
     simpleMove = 2
     hohmannTransfer = 3
+    orbitApproach = 4
 
 class Command:
     type: CommandType
@@ -35,6 +36,9 @@ class Command:
             return self.simpleMoveCommand(entities)
         if self.type == CommandType.hohmannTransfer:
             # required fields are targetObject, orbitAround, acceptedError, timeStep, acceptedOffset
+            return self.hohmannTransferCommand(entities)
+        if self.type == CommandType.orbitApproach:
+            # required fields are targetObject, orbitAround, acceptedOffset
             return self.hohmannTransferCommand(entities)
 
     def gravityTurnCommand(self, entities: dict[str, SimulationEntity]) -> bool:
@@ -188,3 +192,16 @@ class Command:
     def hohmannTransferExitCondition(self, entities: dict[str, SimulationEntity]) -> bool:
         return self.properties["state"] == 4
 
+    # for now doesn't care if velocities of rocket and target differ
+    def orbitApproachCommand(self, entities: dict[str, SimulationEntity]) -> bool:
+        rocket: Rocket = entities[rocketName]
+        orbitObject = entities[self.properties["orbitAround"]]
+        targetObject = entities[self.properties["targetObject"]]
+        relativeVelocity = rocket.velocity - orbitObject.velocity
+
+        return self.orbitApproachExitCondition(entities)
+
+    def orbitApproachExitCondition(self, entities: dict[str, SimulationEntity]) -> bool:
+        rocket: Rocket = entities[rocketName]
+        targetObject = entities[self.properties["targetObject"]]
+        return np.linalg.norm(rocket.position - targetObject.position) < self.properties["acceptedOffset"]
