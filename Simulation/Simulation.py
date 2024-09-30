@@ -70,7 +70,7 @@ def startSimulation(
 
 def executeCommands(commands: List[Command], entities: dict[str, SimulationEntity], simulationTime: pd.Timedelta):
     if len(commands) == 0: return
-    if commands[-1].executeCommand(entities, simulationTime):
+    if commands[-1].executeCommand(entities):
         commands.pop()
 
 def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity], commands: List[Command], entitiesDictionary: dict[str, SimulationEntity], simulationTime: pd.Timedelta):

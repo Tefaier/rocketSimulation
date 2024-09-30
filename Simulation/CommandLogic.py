@@ -1,7 +1,6 @@
 import math
 from enum import Enum
 from typing import List
-import pandas as pd
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -29,7 +28,7 @@ class Command:
         self.type = type
         self.properties = properties
 
-    def executeCommand(self, entities: dict[str, SimulationEntity], simulationTime: pd.Timedelta) -> bool:
+    def executeCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         rocket = entities[rocketName]
         applyFuelFlow(rocket)
         print("Rocket mass: ", rocket.mass)
