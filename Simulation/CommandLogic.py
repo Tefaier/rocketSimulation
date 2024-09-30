@@ -1,6 +1,7 @@
 import math
 from enum import Enum
 from typing import List
+import pandas as pd
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -28,8 +29,9 @@ class Command:
         self.type = type
         self.properties = properties
 
-    def executeCommand(self, entities: dict[str, SimulationEntity]) -> bool:
+    def executeCommand(self, entities: dict[str, SimulationEntity], simulationTime: pd.Timedelta) -> bool:
         rocket = entities[rocketName]
+        applyFuelFlow(rocket)
         print("Rocket mass: ", rocket.mass)
         print("Overload: ", getOverload(rocket))
         if self.type == CommandType.gravityTurn:
@@ -142,7 +144,7 @@ class Command:
                 self.properties["state"] = 2
                 return False
         elif self.properties["state"] == 2:
-            # print(f"Rocket to mars orbit {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
+            print(f"Rocket to mars orbit {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
             if np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position) <= self.properties["acceptedOffset"]:
                 from Simulation.Simulation import timeUnitUsed
                 timeUnitUsed["time"] /= 100

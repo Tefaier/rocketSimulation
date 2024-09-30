@@ -62,7 +62,7 @@ def startSimulation(
         collectedData.append([simulationTime, collectData(trackedEntities)])
         executeFrame(timeUnitUsed["time"], entities, commands, entitiesDictionary, simulationTime)
         simulationTime += timeUnitUsed["time"]
-        # print("Simulation Time: ", simulationTime)
+        print("Simulation Time: ", simulationTime)
         if checkExitCondition(simulationTime, entities, collectedData): break
 
     print("Simulation ended")
@@ -70,7 +70,7 @@ def startSimulation(
 
 def executeCommands(commands: List[Command], entities: dict[str, SimulationEntity], simulationTime: pd.Timedelta):
     if len(commands) == 0: return
-    if commands[-1].executeCommand(entities):
+    if commands[-1].executeCommand(entities, simulationTime):
         commands.pop()
 
 def executeFrame(frameTime: pd.Timedelta, entities: List[SimulationEntity], commands: List[Command], entitiesDictionary: dict[str, SimulationEntity], simulationTime: pd.Timedelta):
@@ -122,9 +122,11 @@ def getSimulationSetup() -> List[SimulationEntity]:
     earth = SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
                              rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity],
                              forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
-    rocket = Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity,
+    rocket = Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity, 
                     rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
-                    thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(190), distanceTTCOM=50,  #  limit on thruster rotation is effectively removed
+                    thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(190),
+                    specificImpulse=rocketSpecificImpulse,
+                    distanceTTCOM=50,  #  limit on thruster rotation is effectively removed
                     forcesApplied=[ForceTypes.gravity], radius=rocketRadius, constraintFunction=rocketConstraint)
     mks = SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
                            rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity],
