@@ -11,7 +11,8 @@ from Simulation.Entity import SimulationEntity, Rocket
 from Simulation.ReferenceValues import rocketName, earthName, sunName, marsName, gravityConstant
 from Simulation.SimulationMath import angleBetweenVectors, getPerpendicularVector, vecNormalize, rotationToVector, \
     setRotationAngle, vectorLerp, noRotation, magnitudeOfProjection
-
+    
+from Simulation.SimulationMath import applyFuelFlow
 
 class CommandType(Enum):
     gravityTurn = 1
@@ -28,6 +29,9 @@ class Command:
         self.properties = properties
 
     def executeCommand(self, entities: dict[str, SimulationEntity]) -> bool:
+        rocket = entities[rocketName]
+        print("Rocket mass: ", rocket.mass)
+        print("Overload: ", getOverload(rocket))
         if self.type == CommandType.gravityTurn:
             # required fields are referenceObject, targetSpeed, maximumDistance, maximumAngleForceToReferenceObject, attackAngleFunction(distance from referenceObject), enforceDirectionRatio(angle of deviation)
             return self.gravityTurnCommand(entities)
@@ -87,7 +91,7 @@ class Command:
         roots = poly.polyroots([x*x + y*y + z*z - force**2, -2*(x*xt + y*yt + z*zt), xt*xt + yt*yt + zt*zt])
         forceToApply = max(roots) * decidedDirection - rocket.force
         rocket.changeThrusterConfig(np.linalg.norm(forceToApply), forceToApply)
-        #print("Relative velocity ",relativeVelocity, "\nRelative position ", rocket.position - refObj.position, "\nDistance ", np.linalg.norm(refObj.position - rocket.position), "\nAttack angle", targetAttackAngle, "\nAcceleration: ", rocket.force / rocket.mass, "\nOverload: ", getOverload(rocket))
+        # print("Relative velocity ",relativeVelocity, "\nRelative position ", rocket.position - refObj.position, "\nDistance ", np.linalg.norm(refObj.position - rocket.position), "\nAttack angle", targetAttackAngle, "\nAcceleration: ", rocket.force / rocket.mass, "\nOverload: ", getOverload(rocket))
 
         return self.gravityTurnExitCondition(entities)
 
@@ -138,7 +142,7 @@ class Command:
                 self.properties["state"] = 2
                 return False
         elif self.properties["state"] == 2:
-            print(f"Rocket to mars orbit {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
+            # print(f"Rocket to mars orbit {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
             if np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position) <= self.properties["acceptedOffset"]:
                 from Simulation.Simulation import timeUnitUsed
                 timeUnitUsed["time"] /= 100

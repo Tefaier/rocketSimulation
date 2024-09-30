@@ -9,17 +9,24 @@ from Simulation.Entity import SimulationEntity, Rocket
 
 noRotation = Rotation.from_euler('x', 0)
 vectorUp = np.array([0, 0, 1])
-
-
+earthAccelerationFreeFall = 9.80665
 
 def vectorLerp(vec1: np.array, vec2: np.array, ratio: float):
     return (1 - ratio) * vec1 + ratio * vec2
 
 def getOverload(obj: Rocket) -> float:
-    from Simulation.ReferenceValues import earthAccelerationFreeFall
-    acceleration = obj.force / obj.mass
-    result_acceleration = math.sqrt(sum(list(x ** 2 for x in acceleration)))
-    return (result_acceleration + earthAccelerationFreeFall) / earthAccelerationFreeFall;
+    result_force = np.sqrt(sum(list(x ** 2 for x in obj.force)))
+    return result_force / (earthAccelerationFreeFall * obj.mass)
+
+# based on https://en.wikipedia.org/wiki/Specific_impulse
+def applyFuelFlow(obj: Rocket) -> float:
+    from Simulation.ReferenceValues import rocketSpecificImpulse
+    F_thrust = obj.thrusterForce
+    g_0 = earthAccelerationFreeFall
+    I_sp = rocketSpecificImpulse
+    fuel_flow = F_thrust / (g_0 * I_sp)
+    obj.mass -= fuel_flow
+    return fuel_flow
 
 def setRotationAngle(rot: Rotation, angle: float, degrees: bool = False) -> Rotation:
     vec = rot.as_rotvec()

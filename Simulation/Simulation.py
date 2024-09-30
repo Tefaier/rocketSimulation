@@ -62,6 +62,7 @@ def startSimulation(
         collectedData.append([simulationTime, collectData(trackedEntities)])
         executeFrame(timeUnitUsed["time"], entities, commands, entitiesDictionary, simulationTime)
         simulationTime += timeUnitUsed["time"]
+        # print("Simulation Time: ", simulationTime)
         if checkExitCondition(simulationTime, entities, collectedData): break
 
     print("Simulation ended")

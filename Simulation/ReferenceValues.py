@@ -4,7 +4,6 @@ import quaternion as quat
 from Simulation.SimulationMath import vecNormalize, vectorUp, rotationToVectorFromBase
 
 gravityConstant = 6.67e-11
-earthAccelerationFreeFall = 9.80665;
 
 earthName = "Earth"
 earthRadius = 6378000
@@ -35,6 +34,8 @@ quaternion = quat.as_float_array(quat.from_spherical_coords(np.deg2rad(90), 0))
 rocketName = "Rocket"
 rocketMass = 109000
 rocketVolume = 146.5
+rocketSpecificImpulse = 291
+rocketPayload = 10000
 rocketMaxForce = 1486000
 rocketVelocity = earthVelocity
 rocketRotation = earthRotation * Rotation.from_quat(quaternion)
