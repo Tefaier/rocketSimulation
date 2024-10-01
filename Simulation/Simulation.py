@@ -1,8 +1,5 @@
 from typing import List
 
-import numpy as np
-import pandas as pd
-
 from Simulation.ReferenceValues import *
 from Simulation.CommandLogic import Command, CommandType
 from Simulation.Entity import *
@@ -16,7 +13,9 @@ timeUnitUsed = {}
 
 def startSimulation(
         timeUnit = pd.Timedelta(seconds = 10),
-        commands=None):
+        commands=None,
+        applyAtmosphere=True
+        ):
     if commands is None:
         commands = [
             Command(
@@ -59,6 +58,11 @@ def startSimulation(
 
     clearValues()
     entities = getSimulationSetup()
+
+    # for removal when is not needed
+    if (not applyAtmosphere):
+        entities.pop(3)
+
     trackedEntities = entities
     entitiesDictionary: dict[str, SimulationEntity] = {}
     for entity in entities:
@@ -70,7 +74,8 @@ def startSimulation(
     print("Simulation started")
 
     while True:
-        collectedData.append([simulationTime, collectData(trackedEntities)])
+        from Simulation.SimulationMath import total_fuel
+        collectedData.append([simulationTime, collectData(trackedEntities), float(total_fuel)])
         executeFrame(timeUnitUsed["time"], entities, commands, entitiesDictionary, simulationTime)
         simulationTime += timeUnitUsed["time"]
         print("Simulation Time: ", simulationTime)
