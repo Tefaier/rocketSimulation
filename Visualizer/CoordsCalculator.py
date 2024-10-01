@@ -15,5 +15,5 @@ def get_system_rect(simulation_data, camera : PrimitiveCamera) -> ((float, float
             min_y = min(min_y, coords[1])
             max_z = max(max_z, coords[2])
             min_z = min(min_z, coords[2])
-            print(name, coords[0], coords[1])
+            #print(name, coords[0], coords[1])
     return (min_x, min_y, min_z), (max_x, max_y, max_z)
