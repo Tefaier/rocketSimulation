@@ -42,6 +42,13 @@ def startSimulation(
                     "timeStep": timeUnit,
                     "acceptedOffset": 1e4
                 }
+            ),
+            Command(
+                CommandType.simpleMove,
+                {
+                    "force": 0,
+                    "targetName": None
+                }
             )
         ]
     commands.reverse()
