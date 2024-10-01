@@ -12,25 +12,28 @@ from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotati
 
 def startSimulation(
         timeUnit = pd.Timedelta(seconds = 1),
-        commands: List[Command] = [
+        commands=None):
+    if commands is None:
+        commands = [
             Command(
                 CommandType.gravityTurn,
                 {
                     "referenceObject": earthName,
-                    "targetSpeed": 30000,
+                    "targetSpeed": 20000,
                     "maximumDistance": earthRadius + 1e7,
                     "maximumAngleForceToReferenceObject": np.pi * 0.2,
                     "attackAngleFunction": interp1d(
-                        x=[0, earthRadius, earthRadius + 2e3, earthRadius + 1e4, earthRadius + 2e4, earthRadius + 1e5, earthRadius + 1.1e7],
+                        x=[0, earthRadius, earthRadius + 2e3, earthRadius + 1e4, earthRadius + 2e4, earthRadius + 1e5,
+                           earthRadius + 1.1e7],
                         y=[0, 0, np.pi / 18, np.pi / 7, np.pi / 5, np.pi / 3, np.pi / 2.2],
-                        kind="linear", assume_sorted=True),
+                        kind="linear", assume_sorted=True, fill_value="extrapolate"),
                     "enforceDirectionRatio": (lambda angle: 0)
-                 }
+                }
             ),
             Command(
               CommandType.simpleMove,
                 {
-                    "force": 1e5
+                    "force": 0
                 }
             ),
             Command(
@@ -43,7 +46,7 @@ def startSimulation(
                     "acceptedOffset": 1e4
                 }
             )
-        ]):
+        ]
     commands.reverse()
 
     entities = getSimulationSetup()
@@ -109,7 +112,7 @@ def collectData(entities: List[SimulationEntity]) -> list:
 def checkExitCondition(simulationTime: pd.Timedelta, entities: List[SimulationEntity], data: list) -> bool:
     rocket = next(x for x in entities if x.name == rocketName)
     earth = next(x for x in entities if x.name == earthName)
-    return len(data) > 1e2 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
+    return len(data) > 1e5 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
 
 def getSimulationSetup() -> List[SimulationEntity]:
     def rocketConstraint(obj: Rocket):
@@ -165,6 +168,6 @@ def calculateInteraction(obj1: SimulationEntity, obj2: SimulationEntity):
                 density = forceSupplier.getDensityFunction()(forceSupplier, forceReceiver.position)
                 if density == 0: continue
                 area = np.pi * (forceReceiver.radius ** 2)
-                # taken for a sphere
+                # taken for a sphere (https://ru.wikipedia.org/wiki/Лобовое_сопротивление)
                 effect = 0.9 * density * (relativeSpeed ** 2) * 0.5 * area
                 forceReceiver.force += effect * vecNormalize(forceSupplier.velocity - forceReceiver.velocity)
