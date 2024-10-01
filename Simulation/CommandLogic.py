@@ -42,7 +42,7 @@ class Command:
             # required fields are force, targetName - may be None
             return self.simpleMoveCommand(entities)
         if self.type == CommandType.hohmannTransfer:
-            # required fields are targetObject, orbitAround, acceptedError, timeStep, acceptedOffset
+            # required fields are targetObject, orbitAround, acceptedError, timeStep, acceptedOffset, speedUpTime
             return self.hohmannTransferCommand(entities)
         if self.type == CommandType.orbitApproach:
             # required fields are targetObject, orbitAround, acceptedOffset
@@ -126,7 +126,7 @@ class Command:
             orbitSpeed1 = math.sqrt(gravityConstant * orbitObject.mass / (np.linalg.norm(rocket.position - orbitObject.position)))
             orbitSpeed2 = np.linalg.norm(targetObject.velocity - orbitObject.velocity)
             speedR = math.sqrt((orbitSpeed1 ** 2 + orbitSpeed2 ** 2) / 2)
-            self.properties["ellipseSpeed"] = 1.03 * orbitSpeed1 * orbitSpeed1 / speedR
+            self.properties["ellipseSpeed"] = 1.05 * orbitSpeed1 * orbitSpeed1 / speedR
         if self.properties.get("state") == 0:
             self.properties["state"] = 1
 
@@ -140,7 +140,8 @@ class Command:
             ).apply(rocket.position - orbitObject.position))
             if self.getDesiredVelocity(self.properties["acceptedError"], rocket, relativeVelocity, desiredDirection, self.properties["ellipseSpeed"]):
                 from Simulation.Simulation import timeUnitUsed
-                timeUnitUsed["time"] *= 100
+                self.properties["oldTime"] = timeUnitUsed["time"]
+                timeUnitUsed["time"] = self.properties["speedUpTime"]
                 rocket.changeThrusterConfig(0, noRotation)
                 self.properties["state"] = 2
                 return False
@@ -148,7 +149,7 @@ class Command:
             print(f"Rocket to mars orbit {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
             if np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position) <= self.properties["acceptedOffset"]:
                 from Simulation.Simulation import timeUnitUsed
-                timeUnitUsed["time"] /= 100
+                timeUnitUsed["time"] = self.properties["oldTime"]
                 self.properties["state"] = 3
         elif self.properties["state"] == 3:
             desiredDirection = vecNormalize(setRotationAngle(
@@ -160,6 +161,10 @@ class Command:
             ).apply(rocket.position - orbitObject.position))
             orbitSpeed2 = np.linalg.norm(targetObject.velocity - orbitObject.velocity)
             if self.getDesiredVelocity(self.properties["acceptedError"], rocket, relativeVelocity, desiredDirection, orbitSpeed2):
+                from Simulation.Simulation import timeUnitUsed
+                timeUnitUsed["time"] = timeUnitUsed["time"] * self.properties["timeAfterMultiplier"]
+                print(
+                    f"Hohmann finished with rocket to mars distance: {np.linalg.norm(targetObject.position - orbitObject.position) - np.linalg.norm(rocket.position - orbitObject.position)}")
                 self.properties["state"] = 4
                 return False
 

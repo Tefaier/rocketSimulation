@@ -40,7 +40,9 @@ def startSimulation(
                     "orbitAround": sunName,
                     "acceptedError": 0.001,
                     "timeStep": timeUnit,
-                    "acceptedOffset": 1e4
+                    "acceptedOffset": 1.2e7,
+                    "speedUpTime": pd.Timedelta(minutes=30),
+                    "timeAfterMultiplier": 4
                 }
             ),
             Command(
@@ -118,7 +120,7 @@ def collectData(entities: List[SimulationEntity]) -> list:
 def checkExitCondition(simulationTime: pd.Timedelta, entities: List[SimulationEntity], data: list) -> bool:
     rocket = next(x for x in entities if x.name == rocketName)
     earth = next(x for x in entities if x.name == earthName)
-    return len(data) > 1e5 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
+    return len(data) > 2e4 or simulationTime > pd.Timedelta(days=365) or (len(data) > 100 and distanceBetweenObjects(rocket, earth) < earthRadius)
 
 def getSimulationSetup() -> List[SimulationEntity]:
     def rocketConstraint(obj: Rocket):
