@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List
 
 import numpy as np
+
 from scipy.spatial.transform import Rotation
 import numpy.polynomial.polynomial as poly
 from Simulation.SimulationMath import getOverload
@@ -12,7 +13,7 @@ from Simulation.ReferenceValues import rocketName, earthName, sunName, marsName,
 from Simulation.SimulationMath import angleBetweenVectors, getPerpendicularVector, vecNormalize, rotationToVector, \
     setRotationAngle, vectorLerp, noRotation, magnitudeOfProjection
     
-from Simulation.SimulationMath import applyFuelFlow
+from Simulation.SimulationMath import applyFuelFlow, changeRocketStage
 
 class CommandType(Enum):
     gravityTurn = 1
@@ -30,6 +31,7 @@ class Command:
 
     def executeCommand(self, entities: dict[str, SimulationEntity]) -> bool:
         rocket = entities[rocketName]
+        changeRocketStage(rocket)
         applyFuelFlow(rocket)
         print("Rocket mass: ", rocket.mass)
         print("Overload: ", getOverload(rocket))
