@@ -38,7 +38,7 @@ def changeRocketStage(obj: Rocket):
     if total_fuel > rocketFirstStageFuelMass + rocketSecondStageFuelMass:
         changeThrusterConfig(obj, rocketThirdStageMaxForce, rocketThirdStageSpecificImpulse)
 
-    if total_fuel > rocketFirstStageFuelMass:
+    if rocketFirstStageFuelMass + rocketSecondStageFuelMass >= total_fuel > rocketFirstStageFuelMass:
         changeThrusterConfig(obj, rocketSecondStageMaxForce, rocketSecondStageSpecificImpulse)
         
 # based on https://en.wikipedia.org/wiki/Specific_impulse
