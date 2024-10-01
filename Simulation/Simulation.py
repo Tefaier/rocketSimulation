@@ -9,7 +9,8 @@ from Simulation.Entity import *
 from scipy.spatial.transform import Rotation
 from scipy.interpolate import interp1d
 
-from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotationToVector, vectorUp, vecNormalize, rotationToVectorFromBase, earthAtmosphereDensityFunc
+from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotationToVector, vectorUp, vecNormalize, \
+    rotationToVectorFromBase, earthAtmosphereDensityFunc, clearValues
 
 timeUnitUsed = {}
 
@@ -56,6 +57,7 @@ def startSimulation(
     commands.reverse()
     timeUnitUsed["time"] = timeUnit
 
+    clearValues()
     entities = getSimulationSetup()
     trackedEntities = entities
     entitiesDictionary: dict[str, SimulationEntity] = {}

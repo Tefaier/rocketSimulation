@@ -22,6 +22,11 @@ def getOverload(obj: Rocket) -> float:
 total_fuel = 0
 total_time_thruster_on = 0
 
+def clearValues():
+    global total_fuel, total_time_thruster_on
+    total_fuel = 0
+    total_time_thruster_on = 0
+
 def changeThrusterConfig(obj: Rocket, force: float, impulse: float):
     if obj.thrusterForceMax != force:
         obj.thrusterForceMax = force
@@ -55,12 +60,13 @@ def applyFuelFlow(obj: Rocket):
     total_flow = fuel_flow * time_unit
         
     global total_fuel, total_time_thruster_on
+
+    if (fuel_flow != 0):
+        total_time_thruster_on += time_unit
+        total_fuel += total_flow
     
     if obj.mass - total_flow >= rocketPayload:
         obj.mass -= total_flow
-        if (fuel_flow != 0):
-            total_time_thruster_on += time_unit
-            total_fuel += total_flow
     else:
         obj.mass = rocketPayload
         obj.thrusterForce = 0
