@@ -66,16 +66,18 @@ class Rocket(SimulationEntity):
     thrusterForceMax: float
     thrusterRotation: np.array  # quaternions
     thrusterRotationMax: float
+    specificImpulse: float
 
     distanceThrusterToCenterOfMass: float
 
-    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, thrusterForce, thrusterForceMin, thrusterForceMax, thrusterRotation, thrusterRotationMax, distanceTTCOM, forcesApplied = [], forcesIgnored = [], constraintFunction = None, densityFunction = None, radius = None):
+    def __init__(self, name, mass, volume, position, velocity, rotation, rotationSpeed, thrusterForce, thrusterForceMin, thrusterForceMax, thrusterRotation, specificImpulse, thrusterRotationMax, distanceTTCOM, forcesApplied = [], forcesIgnored = [], constraintFunction = None, densityFunction = None, radius = None):
         super().__init__(name, mass, volume, position, velocity, rotation, rotationSpeed, forcesApplied, forcesIgnored, constraintFunction, densityFunction, radius)
         self.thrusterForce = thrusterForce
         self.thrusterForceMin = thrusterForceMin
         self.thrusterForceMax = thrusterForceMax
         self.thrusterRotation = thrusterRotation
         self.thrusterRotationMax = thrusterRotationMax
+        self.specificImpulse = specificImpulse
         self.distanceThrusterToCenterOfMass = distanceTTCOM
 
     def changeThrusterConfig(self, thrusterForce: float, forceDirection):

@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+import pandas as pd
 
 from Simulation.ReferenceValues import *
 from Simulation.CommandLogic import Command, CommandType
@@ -10,8 +11,10 @@ from scipy.interpolate import interp1d
 
 from Simulation.SimulationMath import distanceBetweenObjects, noRotation, rotationToVector, vectorUp, vecNormalize, rotationToVectorFromBase, earthAtmosphereDensityFunc
 
+timeUnitUsed = {}
+
 def startSimulation(
-        timeUnit = pd.Timedelta(seconds = 1),
+        timeUnit = pd.Timedelta(seconds = 10),
         commands=None):
     if commands is None:
         commands = [
@@ -19,21 +22,15 @@ def startSimulation(
                 CommandType.gravityTurn,
                 {
                     "referenceObject": earthName,
-                    "targetSpeed": 20000,
+                    "targetSpeed": 30000,
                     "maximumDistance": earthRadius + 1e7,
                     "maximumAngleForceToReferenceObject": np.pi * 0.2,
                     "attackAngleFunction": interp1d(
                         x=[0, earthRadius, earthRadius + 2e3, earthRadius + 1e4, earthRadius + 2e4, earthRadius + 1e5,
                            earthRadius + 1.1e7],
                         y=[0, 0, np.pi / 18, np.pi / 7, np.pi / 5, np.pi / 3, np.pi / 2.2],
-                        kind="linear", assume_sorted=True, fill_value="extrapolate"),
+                        kind="linear", assume_sorted=True),
                     "enforceDirectionRatio": (lambda angle: 0)
-                }
-            ),
-            Command(
-              CommandType.simpleMove,
-                {
-                    "force": 0
                 }
             ),
             Command(
@@ -42,12 +39,13 @@ def startSimulation(
                     "targetObject": marsName,
                     "orbitAround": sunName,
                     "acceptedError": 0.001,
-                    "timeStep": pd.Timedelta(seconds = 1),
+                    "timeStep": timeUnit,
                     "acceptedOffset": 1e4
                 }
             )
         ]
     commands.reverse()
+    timeUnitUsed["time"] = timeUnit
 
     entities = getSimulationSetup()
     trackedEntities = entities
@@ -62,8 +60,9 @@ def startSimulation(
 
     while True:
         collectedData.append([simulationTime, collectData(trackedEntities)])
-        executeFrame(timeUnit, entities, commands, entitiesDictionary, simulationTime)
-        simulationTime += timeUnit
+        executeFrame(timeUnitUsed["time"], entities, commands, entitiesDictionary, simulationTime)
+        simulationTime += timeUnitUsed["time"]
+        print("Simulation Time: ", simulationTime)
         if checkExitCondition(simulationTime, entities, collectedData): break
 
     print("Simulation ended")
@@ -123,9 +122,11 @@ def getSimulationSetup() -> List[SimulationEntity]:
     earth = SimulationEntity(name=earthName, mass=earthMass, volume=None, position=earthPosition, velocity=earthVelocity,
                              rotation=earthRotation, rotationSpeed=earthRotationSpeed, forcesApplied=[ForceTypes.gravity],
                              forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
-    rocket = Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity,
+    rocket = Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity, 
                     rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
-                    thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(190), distanceTTCOM=50,  #  limit on thruster rotation is effectively removed
+                    thrusterForceMax=rocketFirstStageMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(190),
+                    specificImpulse=rocketFirstStageSpecificImpulse,
+                    distanceTTCOM=50,  #  limit on thruster rotation is effectively removed
                     forcesApplied=[ForceTypes.gravity], radius=rocketRadius, constraintFunction=rocketConstraint)
     mks = SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
                            rotation=noRotation, rotationSpeed=noRotation, forcesApplied=[ForceTypes.gravity],
@@ -168,6 +169,6 @@ def calculateInteraction(obj1: SimulationEntity, obj2: SimulationEntity):
                 density = forceSupplier.getDensityFunction()(forceSupplier, forceReceiver.position)
                 if density == 0: continue
                 area = np.pi * (forceReceiver.radius ** 2)
-                # taken for a sphere (https://ru.wikipedia.org/wiki/Лобовое_сопротивление)
+                # taken for a sphere
                 effect = 0.9 * density * (relativeSpeed ** 2) * 0.5 * area
                 forceReceiver.force += effect * vecNormalize(forceSupplier.velocity - forceReceiver.velocity)
