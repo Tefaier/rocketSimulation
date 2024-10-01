@@ -2,10 +2,12 @@ import math
 from math import degrees
 
 import numpy as np
+
 import quaternion as quat
 from scipy.spatial.transform import Rotation
 
 from Simulation.Entity import SimulationEntity, Rocket
+
 noRotation = Rotation.from_euler('x', 0)
 vectorUp = np.array([0, 0, 1])
 earthAccelerationFreeFall = 9.80665
@@ -18,36 +20,65 @@ def getOverload(obj: Rocket) -> float:
     return result_force / (earthAccelerationFreeFall * obj.mass)
 
 total_fuel = 0
+total_time_thruster_on = 0
 
+def changeThrusterConfig(obj: Rocket, force: float, impulse: float):
+    if obj.thrusterForceMax != force:
+        obj.thrusterForceMax = force
+        obj.thrusterForce = force
+        obj.specificImpulse = impulse
+
+def changeRocketStage(obj: Rocket):
+    from Simulation.ReferenceValues import rocketSecondStageMaxForce, rocketThirdStageMaxForce
+    
+    from Simulation.ReferenceValues import rocketFirstStageFuelMass, rocketSecondStageFuelMass, rocketThirdStageFuelMass
+    
+    from Simulation.ReferenceValues import rocketSecondStageSpecificImpulse, rocketThirdStageSpecificImpulse
+    
+    if total_fuel > rocketFirstStageFuelMass + rocketSecondStageFuelMass:
+        changeThrusterConfig(obj, rocketThirdStageMaxForce, rocketThirdStageSpecificImpulse)
+
+    if rocketFirstStageFuelMass + rocketSecondStageFuelMass >= total_fuel > rocketFirstStageFuelMass:
+        changeThrusterConfig(obj, rocketSecondStageMaxForce, rocketSecondStageSpecificImpulse)
+        
 # based on https://en.wikipedia.org/wiki/Specific_impulse
 def applyFuelFlow(obj: Rocket):
     from Simulation.Simulation import timeUnitUsed
     from Simulation.ReferenceValues import rocketPayload
+
     time_unit = timeUnitUsed["time"].total_seconds()
+    
     F_thrust = obj.thrusterForce
     g_0 = earthAccelerationFreeFall
     I_sp = obj.specificImpulse
     fuel_flow = F_thrust / (g_0 * I_sp)
-        
-    global total_fuel
     total_flow = fuel_flow * time_unit
+        
+    global total_fuel, total_time_thruster_on
     
     if obj.mass - total_flow >= rocketPayload:
         obj.mass -= total_flow
-        total_fuel += total_flow
+        if (fuel_flow != 0):
+            total_time_thruster_on += time_unit
+            total_fuel += total_flow
     else:
         obj.mass = rocketPayload
         obj.thrusterForce = 0
+        
+    print("Total fuel: ", total_fuel)
+    print("Total time: ", total_time_thruster_on)
 
 # based on https://en.wikipedia.org/wiki/Tsiolkovsky_rocket_equation
-def calculateCharacteristicSpeed(obj: Rocket):
-    from Simulation.ReferenceValues import rocketMass, rocketPayload
-    I = obj.specificImpulse
-    m_0 = rocketMass
-    m_1 = rocketPayload
-    Tsiolkovsky_constant = m_0 / m_1
-    characteristic_speed = I * np.log(Tsiolkovsky_constant)
-    return characteristic_speed
+# def calculateCharacteristicVelocity(obj: Rocket):
+#     from Simulation.ReferenceValues import rocketMass, rocketPayload
+#     I = obj.specificImpulse * g_0
+#     m_0 = rocketMass
+#     m_1 = rocketPayload
+#     g_0 = earthAccelerationFreeFall
+#     Tsiolkovsky_constant = m_0 / m_1
+#     characteristic_speed = I * np.log(Tsiolkovsky_constant)
+
+#     return characteristic_speed
 
 def setRotationAngle(rot: Rotation, angle: float, degrees: bool = False) -> Rotation:
     vec = rot.as_rotvec()

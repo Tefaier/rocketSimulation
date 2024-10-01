@@ -1,20 +1,29 @@
+import numpy
 import pandas
 import pygame
 
-from Simulation.Simulation import startSimulation, earthRadius
+from Simulation.Simulation import startSimulation, earthRadius, marsRadius, sunRadius
 from Visualizer.CoordsCalculator import get_system_rect
 from Visualizer.Cameras import camera_xy, camera_xz, camera_yz
+
+EARTH_COLOR = numpy.array((0, 255, 0))
+MARS_COLOR = numpy.array((255, 0, 0))
+ROCKET_COLOR = numpy.array((0, 0, 255))
+MKS_COLOR = numpy.array((255, 255, 255))
+PALE_CONST = 0.3
 
 
 if __name__ == "__main__":
     screen_width = 1280
     screen_height = 720
-    real_time_per_tick = pandas.Timedelta(minutes=0, seconds=10)
+    real_time_per_tick = pandas.Timedelta(minutes=0, seconds=30)
     screen_ratio_step = 1.1
     frame_per_second_step = 20
     chosen_camera = camera_xy
-    tracked_entity = None
+    tracked_entity = 'Earth'
     prev_frames_per_second = None
+    show_trajectory = False
+    trajectory_step = 30
 
     simulation_data = startSimulation(timeUnit=real_time_per_tick)
     min_coords, max_coords = get_system_rect(simulation_data, chosen_camera)
@@ -53,6 +62,8 @@ if __name__ == "__main__":
                     tracked_entity = 'Rocket'
                 if event.key == pygame.K_m:
                     tracked_entity = 'MKS'
+                if event.key == pygame.K_t:
+                    show_trajectory = not show_trajectory
                 if event.key == pygame.K_SPACE:
                     if prev_frames_per_second is None:
                         prev_frames_per_second = frames_per_second
@@ -78,29 +89,49 @@ if __name__ == "__main__":
             frame = len(simulation_data) - 1
         elif frame < 0:
             frame = 0
+
+        if show_trajectory:
+            for traj_idx in range(int(frame + trajectory_step) - int(frame) % trajectory_step, len(simulation_data), trajectory_step):
+                time, data = simulation_data[traj_idx]
+                data.sort(key=lambda x: x[1][chosen_camera.third_coord()] * chosen_camera.orientation)
+
+                for entity in data:
+                    coords_2d = (screen_width / 2 + (entity[1][chosen_camera.first_coord()] - center[
+                        chosen_camera.first_coord()]) * screen_ratio,
+                                 screen_height / 2 + -(entity[1][chosen_camera.second_coord()] - center[
+                                     chosen_camera.second_coord()]) * screen_ratio)
+                    if entity[0] == 'Earth':
+                        pygame.draw.circle(screen, EARTH_COLOR * PALE_CONST, coords_2d, 1)
+                    elif entity[0] == 'Rocket':
+                        pygame.draw.circle(screen, ROCKET_COLOR * PALE_CONST, coords_2d, 1)
+                    elif entity[0] == 'MKS':
+                        pygame.draw.circle(screen, MKS_COLOR * PALE_CONST, coords_2d, 1)
+                    elif entity[0] == 'Mars':
+                        pygame.draw.circle(screen, MARS_COLOR * PALE_CONST, coords_2d, 1)
+                    elif entity[0] == 'Sun':
+                        color = 'yellow'
+                        pygame.draw.circle(screen, color, coords_2d, 1)
+
         time, data = simulation_data[int(frame)]
         data.sort(key=lambda x: x[1][chosen_camera.third_coord()] * chosen_camera.orientation)
         if tracked_entity is not None:
             for entity in data:
                 if entity[0] == tracked_entity:
-                    center = entity[1]
+                    center = numpy.copy(entity[1])
                     break
         for entity in data:
-            # print(entity[1][chosen_camera.first_coord()], entity[1][chosen_camera.second_coord()])
             coords_2d = (screen_width / 2 + (entity[1][chosen_camera.first_coord()] - center[chosen_camera.first_coord()]) * screen_ratio, screen_height / 2 + -(entity[1][chosen_camera.second_coord()] - center[chosen_camera.second_coord()]) * screen_ratio)
-            # print(coords_2d)
-            color = 'yellow'
             if entity[0] == 'Earth':
-                color = 'green'
-                pygame.draw.circle(screen, color, coords_2d, max(earthRadius * screen_ratio, 2))
+                pygame.draw.circle(screen, EARTH_COLOR, coords_2d, max(earthRadius * screen_ratio, 2))
             elif entity[0] == 'Rocket':
-                color = 'blue'
-                pygame.draw.circle(screen, color, coords_2d, 2)
+                pygame.draw.circle(screen, ROCKET_COLOR, coords_2d, max(100 * screen_ratio, 2))
             elif entity[0] == 'MKS':
-                color = 'white'
-                pygame.draw.circle(screen, color, coords_2d, 2)
-        # print(screen_ratio)
-        print(frames_per_second)
+                pygame.draw.circle(screen, MKS_COLOR, coords_2d, max(50 * screen_ratio, 2))
+            elif entity[0] == 'Mars':
+                pygame.draw.circle(screen, MARS_COLOR, coords_2d, max(marsRadius * screen_ratio, 2))
+            elif entity[0] == 'Sun':
+                color = 'yellow'
+                pygame.draw.circle(screen, color, coords_2d, max(sunRadius * screen_ratio, 2))
 
 
         width_axis = main_font.render(chosen_camera.first_axis_name(), True, 'red')

@@ -131,8 +131,8 @@ def getSimulationSetup() -> List[SimulationEntity]:
                              forcesIgnored=[ForceTypes.buoyancy, ForceTypes.frictionFluid])
     rocket = Rocket(name=rocketName, mass=rocketMass, volume=rocketVolume, position=rocketPosition, velocity=rocketVelocity, 
                     rotation=rocketRotation, rotationSpeed=noRotation, thrusterForce=0, thrusterForceMin=0,
-                    thrusterForceMax=rocketMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(190),
-                    specificImpulse=rocketSpecificImpulse,
+                    thrusterForceMax=rocketFirstStageMaxForce, thrusterRotation=noRotation, thrusterRotationMax=np.deg2rad(190),
+                    specificImpulse=rocketFirstStageSpecificImpulse,
                     distanceTTCOM=50,  #  limit on thruster rotation is effectively removed
                     forcesApplied=[ForceTypes.gravity], radius=rocketRadius, constraintFunction=rocketConstraint)
     mks = SimulationEntity(name=mksName, mass=mksMass, volume=None, position=mksPosition, velocity=mksVelocity,
