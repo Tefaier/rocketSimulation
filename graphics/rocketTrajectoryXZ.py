@@ -2,12 +2,12 @@ from Simulation.Simulation import startSimulation
 import pandas
 import matplotlib.pyplot as plt
 
-def func(n):
+def func(n, bool=True):
     x = []
     y = []
     z = []
     k = 0
-    for i in startSimulation(timeUnit=pandas.Timedelta(minutes=0, seconds=n)):
+    for i in startSimulation(timeUnit=pandas.Timedelta(minutes=0, seconds=n), applyAtmosphere=bool):
         for j in i[1]:
             if (k * n >= 3000):
                 break
@@ -23,16 +23,30 @@ def func(n):
     return [x, y, z]
 
 # в комментариях написан промежуток времени между соседними кадрами
-arr1 = func(60)
-plt.plot(arr1[0], arr1[2], color='green') # 60 секунд
-arr2 = func(30)
-plt.plot(arr2[0], arr2[2], color='blue') # 30 секунд
-arr3 = func(20)
-plt.plot(arr3[0], arr3[2], color='yellow') # 20 секунд
-arr4 = func(12)
-plt.plot(arr4[0], arr4[2], color='red') # 12 секунд
-arr5 = func(6)
-plt.plot(arr5[0], arr5[2], color='orange') # 6 секунд
+
+# с атмосферой
+arr11 = func(50)
+plt.plot(arr11[0], arr11[2], color='green') # 50 секунд
+arr21 = func(30)
+plt.plot(arr21[0], arr21[2], color='blue') # 30 секунд
+arr31 = func(20)
+plt.plot(arr31[0], arr31[2], color='yellow') # 20 секунд
+arr41 = func(12)
+plt.plot(arr41[0], arr41[2], color='red') # 12 секунд
+arr51 = func(6)
+plt.plot(arr51[0], arr51[2], color='orange') # 6 секунд
+
+# без атмосферы (пунктирная линия)
+arr12 = func(50, False)
+plt.plot(arr12[0], arr12[2], '--', color='green') # 50 секунд
+arr22 = func(30, False)
+plt.plot(arr22[0], arr22[2], '--', color='blue') # 30 секунд
+arr32 = func(20, False)
+plt.plot(arr32[0], arr32[2], '--', color='yellow') # 20 секунд
+arr42 = func(12, False)
+plt.plot(arr42[0], arr42[2], '--', color='red') # 12 секунд
+arr52 = func(6, False)
+plt.plot(arr52[0], arr52[2], '--', color='orange') # 6 секунд
 
 plt.xlabel('Ось х')
 plt.ylabel('Ось z')
