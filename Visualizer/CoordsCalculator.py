@@ -5,7 +5,7 @@ def get_system_rect(simulation_data, camera : PrimitiveCamera) -> ((float, float
     max_x = min_x = simulation_data[0][1][0][1][0]
     max_y = min_y = simulation_data[0][1][0][1][1]
     max_z = min_z = simulation_data[0][1][0][1][2]
-    for time, data in simulation_data:
+    for time, data, _ in simulation_data:
         for object in data:
             name = object[0]
             coords = object[1]
