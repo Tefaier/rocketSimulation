@@ -112,7 +112,7 @@ if __name__ == "__main__":
                         color = 'yellow'
                         pygame.draw.circle(screen, color, coords_2d, 1)
 
-        time, data = simulation_data[int(frame)]
+        time, data, _ = simulation_data[int(frame)]
         data.sort(key=lambda x: x[1][chosen_camera.third_coord()] * chosen_camera.orientation)
         if tracked_entity is not None:
             for entity in data:
